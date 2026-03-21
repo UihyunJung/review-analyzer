@@ -1,55 +1,30 @@
 {
   "name": "review-analyzer",
   "displayName": "Place Review Analyzer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI-powered restaurant & place review insights for Google Maps",
   "type": "module",
-  "author": "Jonathan",
+  "private": true,
   "scripts": {
-    "dev": "plasmo dev",
-    "build": "plasmo build",
+    "dev": "vite",
+    "build": "vite build && vite build --config vite.cs-gmaps.config.js && vite build --config vite.cs-naver.config.js",
     "lint": "eslint src/",
-    "format:check": "prettier --check 'src/**/*.{ts,tsx}'",
-    "format": "prettier --write 'src/**/*.{ts,tsx}'",
+    "format:check": "prettier --check 'src/**/*.{ts,js}'",
+    "format": "prettier --write 'src/**/*.{ts,js}'",
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {
-    "@plasmohq/messaging": "^0.7.0",
-    "@plasmohq/storage": "^1.14.0",
-    "@supabase/supabase-js": "^2.99.1",
-    "plasmo": "^0.90.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zustand": "^5.0.0"
-  },
   "devDependencies": {
     "@types/chrome": "^0.0.287",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "eslint": "^9.0.0",
-    "eslint-plugin-react": "^7.37.0",
-    "eslint-plugin-react-hooks": "^5.0.0",
     "jsdom": "^25.0.0",
     "prettier": "^3.4.0",
     "typescript": "^5.7.0",
+    "vite": "^6.0.0",
     "vitest": "^3.0.0",
-    "wrangler": "^4.73.0"
-  },
-  "manifest": {
-    "host_permissions": [
-      "https://www.google.com/maps/*",
-      "https://m.place.naver.com/*",
-      "https://pcmap.place.naver.com/*",
-      "https://*.supabase.co/*",
-      "https://*.workers.dev/*"
-    ],
-    "permissions": [
-      "sidePanel",
-      "storage"
-    ]
+    "wrangler": "^4.74.0"
   },
   "packageManager": "pnpm@10.5.2"
 }

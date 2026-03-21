@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
+  "version": "0.2.0",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "permissions": ["storage", "sidePanel", "alarms"],
+  "host_permissions": [
+    "https://www.google.com/maps/*",
+    "https://m.place.naver.com/*",
+    "https://pcmap.place.naver.com/*",
+    "https://place-review-api.uihyun-jung.workers.dev/*",
+    "https://paddle-extensions-backend.vercel.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.google.com/maps/place/*"],
+      "js": ["content-google-maps.js"]
+    },
+    {
+      "matches": ["https://m.place.naver.com/*", "https://pcmap.place.naver.com/*"],
+      "js": ["content-naver-place.js"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

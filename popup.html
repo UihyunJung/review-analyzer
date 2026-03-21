@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="src/css/popup.css">
+</head>
+<body>
+  <div class="popup">
+    <header class="popup-header">
+      <div class="header-row">
+        <h1 data-i18n="title">Place Review Analyzer</h1>
+        <div id="auth-area"></div>
+      </div>
+      <p class="subtitle" id="subtitle" data-i18n="subtitle">AI-powered restaurant insights</p>
+    </header>
+
+    <!-- 구독 상태 배지 -->
+    <div id="status-badge" class="status-badge status-free" data-i18n="free">Free</div>
+
+    <!-- Pro 정보 패널 (Pro 사용자만) -->
+    <div id="pro-panel" class="pro-panel" style="display:none">
+      <p id="pro-panel-text"></p>
+    </div>
+
+    <!-- 사용량 -->
+    <section class="usage-section" id="usage-section">
+      <div class="usage-label">
+        <span data-i18n="dailyUsage">Today's usage</span>
+        <span class="usage-count" id="usage-count">0 / 5</span>
+      </div>
+      <div class="usage-bar">
+        <div class="usage-fill" id="usage-fill"></div>
+      </div>
+      <p class="usage-remaining" id="usage-remaining" data-i18n="remaining">5 analyses remaining</p>
+      <p class="usage-reset" data-i18n="resetsAt">Resets daily at midnight UTC</p>
+    </section>
+
+    <!-- 동기화 실패 알림 -->
+    <div id="sync-notice" class="sync-notice" style="display:none">
+      <span data-i18n="syncFailed">Unable to sync. Using cached data.</span>
+    </div>
+
+    <!-- 업그레이드 패널 (Free 사용자만) -->
+    <section id="upgrade-panel" class="upgrade-panel">
+      <p data-i18n="upgradeDesc">Unlock unlimited analyses + place comparison</p>
+      <div class="plan-buttons">
+        <button id="btn-monthly" class="plan-btn" data-i18n="monthlyPlan">$3.99/mo</button>
+        <button id="btn-annual" class="plan-btn plan-annual" data-i18n="annualPlan">$29.99/yr — Save 37%</button>
+      </div>
+      <div class="upgrade-actions">
+        <button id="btn-verify" class="link-btn" data-i18n="verifyPurchase">Verify purchase</button>
+        <span class="separator">·</span>
+        <button id="btn-restore-link" class="link-btn" data-i18n="restoreLink">Restore purchase</button>
+      </div>
+      <!-- 복원 입력 -->
+      <div id="restore-section" class="restore-section" style="display:none">
+        <input type="email" id="restore-email" data-i18n-placeholder="emailPlaceholder" placeholder="Email used for purchase">
+        <div class="restore-buttons">
+          <button id="btn-restore-confirm" class="small-btn" data-i18n="restore">Restore</button>
+          <button id="btn-restore-cancel" class="small-btn secondary" data-i18n="cancel">Cancel</button>
+        </div>
+      </div>
+      <p id="upgrade-message" class="upgrade-message"></p>
+    </section>
+
+    <footer class="popup-footer">
+      <p class="supported" data-i18n="supported">Currently supports google.com/maps only</p>
+    </footer>
+  </div>
+  <script type="module" src="src/js/ui.ts"></script>
+</body>
+</html>

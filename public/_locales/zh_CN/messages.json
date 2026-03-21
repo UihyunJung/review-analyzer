@@ -1,0 +1,4 @@
+{
+  "extName": { "message": "场所评论分析器" },
+  "extDescription": { "message": "AI驱动的餐厅和场所评论分析。从Google Maps和Naver Place的评论中获取评分、亮点和注意事项。" }
+}

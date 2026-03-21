@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="src/css/sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel" id="sidepanel">
+    <!-- 로딩 -->
+    <div id="state-loading" class="state-message" data-i18n="analyzing">Analyzing reviews...</div>
+
+    <!-- 빈 상태 -->
+    <div id="state-empty" class="state-message" style="display:none">
+      <h2 data-i18n="title">Place Review Analyzer</h2>
+      <p data-i18n="emptyMessage">Visit a Google Maps place page and click "Analyze This Place" to get started.</p>
+    </div>
+
+    <!-- 에러 -->
+    <div id="state-error" class="state-error" style="display:none"></div>
+
+    <!-- 결과 -->
+    <div id="state-result" style="display:none">
+      <header id="place-header">
+        <h1 id="place-name"></h1>
+        <p id="place-category" class="category"></p>
+      </header>
+
+      <section class="section">
+        <h2 data-i18n="aspectScores">Aspect Scores</h2>
+        <div id="aspects-container"></div>
+      </section>
+
+      <section class="section" id="highlights-section" style="display:none">
+        <h2 data-i18n="highlights">Highlights</h2>
+        <ul id="highlights-list" class="result-list highlights"></ul>
+      </section>
+
+      <section class="section" id="warnings-section" style="display:none">
+        <h2 data-i18n="watchOut">Watch Out</h2>
+        <ul id="warnings-list" class="result-list warnings"></ul>
+      </section>
+
+      <!-- Pro 기능 -->
+      <section class="section" id="pro-section" style="display:none">
+        <h2 data-i18n="proInsights">Pro Insights</h2>
+        <div id="trend-container"></div>
+        <div id="waittime-container"></div>
+        <div id="bestfor-container"></div>
+      </section>
+
+      <!-- Pro 게이트 (Free 사용자) -->
+      <section id="pro-gate" class="pro-gate" style="display:none">
+        <p data-i18n="proGateText">Trend analysis, wait times & more</p>
+        <button class="pro-gate-btn" data-i18n="unlockPro">Unlock with Pro</button>
+      </section>
+
+      <section class="section" id="lang-section" style="display:none">
+        <p id="lang-info" class="lang-info"></p>
+      </section>
+
+      <footer class="result-footer">
+        <p id="review-count"></p>
+      </footer>
+    </div>
+  </div>
+  <script type="module" src="src/js/sidepanel.ts"></script>
+</body>
+</html>

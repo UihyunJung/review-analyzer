@@ -1,5 +1,5 @@
-import type { Review, PlaceInfo } from '~lib/types'
-import { MAX_REVIEWS, MAX_REVIEW_LENGTH } from '~lib/constants'
+import type { Review, PlaceInfo } from '../types'
+import { MAX_REVIEWS, MAX_REVIEW_LENGTH } from '../../js/config.js'
 
 const SELECTORS = {
   // 리뷰 컨테이너

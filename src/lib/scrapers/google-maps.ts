@@ -1,5 +1,5 @@
-import type { Review, PlaceInfo } from '~lib/types'
-import { MAX_REVIEWS, MAX_REVIEW_LENGTH } from '~lib/constants'
+import type { Review, PlaceInfo } from '../types'
+import { MAX_REVIEWS, MAX_REVIEW_LENGTH } from '../../js/config.js'
 
 // --- Selectors (상수 분리: DOM 변경 시 여기만 수정) ---
 const SELECTORS = {
