@@ -7,7 +7,7 @@ import {
   UsageExceededError,
   ValidationError
 } from '../lib/validate'
-import { extractIdentity } from '../lib/auth'
+import { extractIdentity, AuthError } from '../lib/auth'
 
 const MAX_REVIEWS = 50
 const MAX_REVIEW_LENGTH = 500
@@ -66,6 +66,26 @@ Scores are 0-10. Only include relevant aspects (e.g. skip "food" for a hotel).
 Be concise. Each summary should be 1-2 sentences max.`
 }
 
+function buildProSystemPrompt(category: string, site: string): string {
+  const base = buildSystemPrompt(category, site)
+  const proAddition = site === 'naver_place'
+    ? `
+
+추가로 다음 필드도 JSON에 포함하세요:
+"trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "...", "direction": "improving|declining|stable", "reason": "..." },
+"waitTime": { "estimate": "대기시간 추정 또는 insufficient data", "basedOn": 참조한리뷰수 },
+"bestFor": ["데이트", "가족모임", "회식"]
+대기시간 언급이 3건 미만이면 estimate를 "insufficient data"로.`
+    : `
+
+Also include these additional fields in the JSON:
+"trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "...", "direction": "improving|declining|stable", "reason": "..." },
+"waitTime": { "estimate": "estimated wait or insufficient data", "basedOn": numberOfReviewsMentioningWait },
+"bestFor": ["romantic dinner", "business lunch", "family"]
+If fewer than 3 reviews mention wait times, return estimate as "insufficient data".`
+  return base + proAddition
+}
+
 function buildUserMessage(reviews: Review[]): string {
   const reviewTexts = reviews
     .map((r, i) => `[${i + 1}] (${r.rating}★) ${r.text}`)
@@ -114,7 +134,7 @@ export async function handleAnalyze(
       return errorResponse('Request body too large', 413)
     }
 
-    // 4. 사용량 체크 (increment_usage RPC)
+    // 4. 사용량 원자적 카운트 증가 (Race condition 방지)
     const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
     const usageParams =
       identity.type === 'user'
@@ -125,24 +145,55 @@ export async function handleAnalyze(
       exceeded: boolean
     }>
 
-    if (usageResult[0]?.exceeded) {
+    // Pro 체크 (서버에서 DB 조회 — 클라이언트 isPro 캐시를 신뢰하지 않음)
+    let isPro = false
+    if (identity.type === 'user') {
+      const subs = (await supabaseQuery(
+        env,
+        `subscriptions?user_id=eq.${encodeURIComponent(identity.userId!)}&status=eq.active&select=id`,
+        { headers: { Accept: 'application/json' } }
+      )) as Array<{ id: string }>
+      isPro = subs.length > 0
+    }
+
+    if (!isPro && usageResult[0]?.exceeded) {
       return jsonResponse(
         { success: false, exceeded: true, error: 'Daily analysis limit reached' },
         402
       )
     }
 
-    // 5. Claude API 호출
-    const systemPrompt = buildSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
+    // 5. Claude API 호출 (실패 시 카운트 롤백)
+    const systemPrompt = isPro
+      ? buildProSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
+      : buildSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
     const userMessage = buildUserMessage(body.reviews)
-    const { text: claudeText, model } = await callClaude(env, systemPrompt, userMessage)
+    let claudeText: string
+    let model: string
+    try {
+      const result = await callClaude(env, systemPrompt, userMessage)
+      claudeText = result.text
+      model = result.model
+    } catch (err) {
+      // Claude API 실패 → 카운트 롤백
+      try {
+        const rollbackParams =
+          identity.type === 'user'
+            ? { p_user_id: identity.userId }
+            : { p_device_id: identity.deviceId }
+        await supabaseRpc(env, 'decrement_usage', rollbackParams)
+      } catch {
+        console.error('[Rollback failed]', err)
+      }
+      const msg = err instanceof Error ? err.message : 'Claude API failed'
+      return errorResponse(msg, 502)
+    }
 
-    // 6. JSON 파싱
+    // 7. JSON 파싱
     let analysisResult: Record<string, unknown>
     try {
       analysisResult = JSON.parse(claudeText)
     } catch {
-      // Claude가 코드블록으로 감쌌을 수 있음
       const jsonMatch = claudeText.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         analysisResult = JSON.parse(jsonMatch[0])
@@ -151,7 +202,7 @@ export async function handleAnalyze(
       }
     }
 
-    // 7. languageBreakdown 서버사이드 집계
+    // 8. languageBreakdown 서버사이드 집계
     const languageBreakdown = computeLanguageBreakdown(body.reviews)
 
     const summary = {
@@ -159,7 +210,7 @@ export async function handleAnalyze(
       languageBreakdown
     }
 
-    // 8. analysis_history에 저장 (원문 미저장)
+    // 9. analysis_history에 저장 (원문 미저장)
     try {
       await supabaseQuery(env, 'analysis_history', {
         method: 'POST',
@@ -176,23 +227,26 @@ export async function handleAnalyze(
           site: body.site ?? 'google_maps',
           model,
           prompt_version: env.PROMPT_VERSION
-        }
+        },
+        headers: { Prefer: 'return=minimal' }
       })
     } catch {
       // 히스토리 저장 실패해도 분석 결과는 반환
     }
 
-    // 9. 응답
+    // 10. 응답 (isPro를 서버에서 반환 — 클라이언트가 Pro UI 표시에 사용)
     return jsonResponse({
       success: true,
       data: {
         ...summary,
         reviewCount: body.reviews.length,
         model,
-        promptVersion: env.PROMPT_VERSION
+        promptVersion: env.PROMPT_VERSION,
+        isPro
       }
     })
   } catch (err) {
+    if (err instanceof AuthError) return errorResponse(err.message, 401)
     if (err instanceof SizeError) return errorResponse(err.message, 413)
     if (err instanceof UsageExceededError) {
       return jsonResponse({ success: false, exceeded: true, error: err.message }, 402)

@@ -125,7 +125,7 @@ function Popup() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ email: user.email })
+        body: '{}'
       })
 
       const data = await res.json()
@@ -133,7 +133,7 @@ function Popup() {
         const checkoutUrl =
           process.env.PLASMO_PUBLIC_CHECKOUT_URL ?? 'https://placeholder.github.io/checkout'
         chrome.tabs.create({
-          url: `${checkoutUrl}?token=${data.token}&plan=monthly`
+          url: `${checkoutUrl}#token=${data.token}&plan=monthly`
         })
       }
     } catch {

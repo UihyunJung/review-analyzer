@@ -58,24 +58,33 @@ export async function handlePaddleWebhook(
       return errorResponse('Missing userId in custom_data', 400)
     }
 
-    // subscription.updated → plan/period만 업데이트, status 유지
+    // subscription.updated → status가 포함되어 있으면 반영, period/plan도 업데이트
     if (eventType === 'subscription.updated') {
       const periodEnd = subData.current_billing_period?.ends_at ?? null
+      const plan = subData.items?.[0]?.price?.id?.includes('annual') ? 'annual' : 'monthly'
+
+      const updateBody: Record<string, unknown> = {
+        current_period_end: periodEnd,
+        plan,
+        updated_at: new Date().toISOString()
+      }
+
+      // Paddle이 status를 포함한 경우 반영 (status 변경도 updated 이벤트로 올 수 있음)
+      if (subData.status) {
+        updateBody.status = subData.status
+      }
 
       await supabaseQuery(
         env,
-        `subscriptions?user_id=eq.${userId}`,
+        `subscriptions?user_id=eq.${encodeURIComponent(userId)}`,
         {
           method: 'PATCH',
-          body: {
-            current_period_end: periodEnd,
-            updated_at: new Date().toISOString()
-          },
+          body: updateBody,
           headers: { Prefer: 'return=minimal' }
         }
       )
 
-      return jsonResponse({ success: true, action: 'updated' })
+      return jsonResponse({ success: true, action: 'updated', status: subData.status ?? 'unchanged' })
     }
 
     // 나머지 이벤트: status 변경

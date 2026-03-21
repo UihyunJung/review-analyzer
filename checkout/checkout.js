@@ -13,8 +13,8 @@ let selectedPlan = 'monthly'
 let verifiedUserId = null
 let verifiedEmail = null
 
-// --- URL params ---
-const params = new URLSearchParams(window.location.search)
+// --- URL hash params (토큰을 query가 아닌 hash로 받아 Referer 유출 방지) ---
+const params = new URLSearchParams(window.location.hash.slice(1))
 const token = params.get('token')
 const planParam = params.get('plan')
 if (planParam === 'annual') {
@@ -49,6 +49,9 @@ async function init() {
 
     verifiedUserId = data.userId
     verifiedEmail = data.email || ''
+
+    // 토큰 사용 후 hash 제거 (브라우저 히스토리에서 토큰 노출 방지)
+    history.replaceState(null, '', window.location.pathname)
 
     // 성공: 메인 UI 표시
     document.getElementById('content-loading').style.display = 'none'

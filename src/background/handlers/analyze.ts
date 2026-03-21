@@ -1,6 +1,6 @@
 import { EDGE_FUNCTION_URL, STORAGE_KEYS } from '~lib/constants'
 import { getAccessToken } from '~lib/api/supabase'
-import type { AnalyzeRequest, AnalyzeResponse, UsageData } from '~lib/types'
+import type { AnalyzeRequest, AnalyzeResponse } from '~lib/types'
 
 async function getDeviceId(): Promise<string> {
   const result = await chrome.storage.local.get(STORAGE_KEYS.DEVICE_ID)
@@ -23,25 +23,15 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return { 'X-Device-ID': deviceId }
 }
 
-/** 현재 사용자가 Pro인지 확인 (로컬 캐시 기반) */
-async function isPro(): Promise<boolean> {
-  const cached = await chrome.storage.local.get(STORAGE_KEYS.USAGE_CACHE)
-  const usage = cached[STORAGE_KEYS.USAGE_CACHE] as UsageData | undefined
-  return usage?.isPro ?? false
-}
-
 export async function handleAnalyzePlace(
   request: AnalyzeRequest,
   sendResponse: (response: AnalyzeResponse) => void
 ) {
   try {
     const authHeaders = await getAuthHeaders()
-    const userIsPro = await isPro()
 
-    // Pro → /analyze-pro, Free → /analyze
-    const endpoint = userIsPro ? '/analyze-pro' : '/analyze'
-
-    const res = await fetch(`${EDGE_FUNCTION_URL}${endpoint}`, {
+    // 항상 /analyze로 전송. 서버가 Pro 여부를 DB에서 판단하여 Pro 분석 결과 포함.
+    const res = await fetch(`${EDGE_FUNCTION_URL}/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

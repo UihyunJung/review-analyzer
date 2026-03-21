@@ -1,6 +1,7 @@
 import type { Env } from '../index'
-import { extractIdentity } from '../lib/auth'
+import { extractIdentity, AuthError } from '../lib/auth'
 import { createCheckoutToken, verifyCheckoutToken } from '../lib/checkout-token'
+import { supabaseQuery } from '../lib/supabase'
 
 /** POST /checkout-token — 확장에서 호출, 인증 사용자만 */
 export async function handleCreateCheckoutToken(
@@ -12,17 +13,14 @@ export async function handleCreateCheckoutToken(
   try {
     const identity = await extractIdentity(request, env)
     if (identity.type !== 'user' || !identity.userId) {
-      return errorResponse('Authentication required', 401)
+      return errorResponse('Authentication required. Sign in to upgrade to Pro.', 401)
     }
 
-    // body에서 email 가져오기 (또는 JWT에서 추출 가능)
-    const body = (await request.json().catch(() => ({}))) as { email?: string }
-    const email = body.email ?? ''
-
-    const token = await createCheckoutToken(identity.userId, email, env)
+    const token = await createCheckoutToken(identity.userId, env)
 
     return jsonResponse({ success: true, token })
   } catch (err) {
+    if (err instanceof AuthError) return errorResponse(err.message, 401)
     const message = err instanceof Error ? err.message : 'Internal server error'
     return errorResponse(message, 500)
   }
@@ -36,9 +34,22 @@ export async function handleVerifyCheckoutToken(
   errorResponse: (message: string, status: number) => Response,
   checkoutOrigin: string
 ): Promise<Response> {
-  // CORS: 체크아웃 도메인만 허용
   const origin = request.headers.get('Origin') ?? ''
-  if (checkoutOrigin && origin !== checkoutOrigin) {
+  const corsOrigin = checkoutOrigin || '*'
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': corsOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type'
+  }
+
+  // CORS preflight
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders })
+  }
+
+  // CORS origin 체크
+  if (checkoutOrigin && origin && origin !== checkoutOrigin) {
     return errorResponse('CORS origin not allowed', 403)
   }
 
@@ -49,17 +60,26 @@ export async function handleVerifyCheckoutToken(
     const payload = await verifyCheckoutToken(body.token, env)
     if (!payload) return errorResponse('Invalid or expired token', 401)
 
-    return new Response(
-      JSON.stringify({ success: true, userId: payload.userId, email: payload.email }),
-      {
-        status: 200,
+    // email은 토큰에 미포함 — 서버에서 Supabase Auth로 조회
+    let email = ''
+    try {
+      const res = await fetch(`${env.SUPABASE_URL}/auth/v1/admin/users/${payload.userId}`, {
         headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': checkoutOrigin || '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY
         }
+      })
+      if (res.ok) {
+        const user = (await res.json()) as { email?: string }
+        email = user.email ?? ''
       }
+    } catch {
+      // email 조회 실패해도 userId만으로 진행 가능
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, userId: payload.userId, email }),
+      { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...corsHeaders } }
     )
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal server error'

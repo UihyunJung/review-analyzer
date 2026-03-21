@@ -16,8 +16,8 @@ export async function handleUsage(
     // identity에 따라 쿼리 분기
     const filter =
       identity.type === 'user'
-        ? `user_id=eq.${identity.userId}`
-        : `device_id=eq.${identity.deviceId}`
+        ? `user_id=eq.${encodeURIComponent(identity.userId!)}`
+        : `device_id=eq.${encodeURIComponent(identity.deviceId!)}`
 
     const result = (await supabaseQuery(env, `usage?${filter}&date_key=eq.${today}&select=count`, {
       headers: { Accept: 'application/json' }
@@ -30,7 +30,7 @@ export async function handleUsage(
     if (identity.type === 'user') {
       const subs = (await supabaseQuery(
         env,
-        `subscriptions?user_id=eq.${identity.userId}&status=eq.active&select=id`,
+        `subscriptions?user_id=eq.${encodeURIComponent(identity.userId!)}&status=eq.active&select=id`,
         { headers: { Accept: 'application/json' } }
       )) as Array<{ id: string }>
       isPro = subs.length > 0

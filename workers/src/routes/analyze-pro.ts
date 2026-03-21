@@ -116,7 +116,7 @@ export async function handleAnalyzePro(
 
     const subs = (await supabaseQuery(
       env,
-      `subscriptions?user_id=eq.${identity.userId}&status=eq.active&select=id`,
+      `subscriptions?user_id=eq.${encodeURIComponent(identity.userId!)}&status=eq.active&select=id`,
       { headers: { Accept: 'application/json' } }
     )) as Array<{ id: string }>
 
@@ -169,7 +169,8 @@ export async function handleAnalyzePro(
           site: body.site ?? 'google_maps',
           model,
           prompt_version: env.PROMPT_VERSION
-        }
+        },
+        headers: { Prefer: 'return=minimal' }
       })
     } catch {
       // 저장 실패해도 결과는 반환
