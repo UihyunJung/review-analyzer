@@ -7,7 +7,7 @@ function createButton(): HTMLButtonElement {
   const btn = document.createElement('button')
   Object.assign(btn.style, {
     position: 'fixed',
-    bottom: '24px',
+    bottom: '160px',
     right: '24px',
     padding: '12px 24px',
     background: '#667eea',
@@ -44,20 +44,22 @@ async function handleClick(btn: HTMLButtonElement) {
       return
     }
 
+    // 사용자 제스처 컨텍스트에서 SidePanel 먼저 열기
+    chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' })
+
     chrome.runtime.sendMessage(
-      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'google_maps' },
+      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'google_maps', lang: getDefaultLanguage() },
       (response) => {
         loading = false
         if (response?.success) {
           btn.textContent = '\u2713 ' + t('doneButton')
           btn.style.background = '#43a047'
-          chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' })
           setTimeout(() => resetButton(btn), 3000)
         } else if (response?.exceeded) {
           btn.textContent = t('upgradeButton')
           btn.style.background = '#ff9800'
         } else {
-          btn.textContent = response?.error || t('analysisFailed')
+          btn.textContent = t('analysisFailed')
           btn.style.background = '#e53935'
           setTimeout(() => resetButton(btn), 5000)
         }
@@ -78,7 +80,29 @@ function resetButton(btn: HTMLButtonElement) {
   btn.style.opacity = '1'
 }
 
-// 주입
+// 주입 — SPA URL 변화 감시
 const btn = createButton()
 btn.addEventListener('click', () => handleClick(btn))
-document.body.appendChild(btn)
+
+function updateButtonVisibility() {
+  const isPlacePage = window.location.pathname.includes('/place/')
+  if (isPlacePage) {
+    if (!btn.parentElement) document.body.appendChild(btn)
+    btn.style.display = ''
+    resetButton(btn)
+  } else {
+    btn.style.display = 'none'
+  }
+}
+
+updateButtonVisibility()
+
+// Google Maps SPA: URL 변화 감지
+let lastUrl = location.href
+const observer = new MutationObserver(() => {
+  if (location.href !== lastUrl) {
+    lastUrl = location.href
+    updateButtonVisibility()
+  }
+})
+observer.observe(document.body, { childList: true, subtree: true })

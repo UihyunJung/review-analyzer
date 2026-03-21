@@ -14,5 +14,6 @@ export const STORAGE_KEYS = {
   SUB_STATUS: 'pra_sub_status',
   SYNC_FAILED: 'pra_sync_failed',
   LAST_ANALYSIS: 'pra_last_analysis',
-  USAGE_CACHE: 'pra_usage_cache'
+  USAGE_CACHE: 'pra_usage_cache',
+  LANGUAGE: 'pra_language'
 }

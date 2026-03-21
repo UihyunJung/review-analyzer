@@ -21,10 +21,11 @@ function updatePremiumUI() {
     else if (planType === 'year') label = t('annualLabel')
 
     let badgeText = '\u2713 ' + label
+    let dateStr = ''
     if (expiresAt) {
       const d = new Date(expiresAt)
       if (!isNaN(d.getTime())) {
-        const dateStr = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
+        dateStr = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
         const suffix = subStatus === 'canceled' ? t('expires') : t('renews')
         badgeText += ` \u00B7 ${dateStr} ${suffix}`
       }
@@ -33,11 +34,9 @@ function updatePremiumUI() {
     badge.textContent = badgeText
     badge.className = 'status-badge status-pro'
     upgradePanel.style.display = 'none'
-    proPanel.style.display = 'block'
+    proPanel.style.display = 'none'
 
-    if (subStatus === 'canceled' && expiresAt) {
-      const d = new Date(expiresAt)
-      const dateStr = `${d.getUTCMonth() + 1}/${d.getUTCDate()}`
+    if (subStatus === 'canceled' && dateStr) {
       proPanelText.textContent = t('canceledNotice').replace('{date}', dateStr)
     } else {
       proPanelText.textContent = t('autoRenewNotice')
@@ -45,7 +44,7 @@ function updatePremiumUI() {
   } else {
     badge.textContent = t('free')
     badge.className = 'status-badge status-free'
-    upgradePanel.style.display = 'block'
+    upgradePanel.style.display = 'none'
     proPanel.style.display = 'none'
   }
 }
@@ -55,6 +54,7 @@ function updateUsageUI(usage: { count: number; limit: number; remaining: number 
   const countEl = el('usage-count')
   const fillEl = el('usage-fill')
   const remainingEl = el('usage-remaining')
+  const upsellEl = el('usage-upsell')
 
   const exceeded = usage.remaining <= 0 && !isPremium
   countEl.textContent = `${usage.count} / ${usage.limit}`
@@ -62,10 +62,23 @@ function updateUsageUI(usage: { count: number; limit: number; remaining: number 
   fillEl.className = exceeded ? 'usage-fill exceeded' : 'usage-fill'
   section.className = exceeded ? 'usage-section exceeded' : 'usage-section'
   remainingEl.textContent = exceeded ? t('limitReached') : `${usage.remaining} ${t('remaining')}`
+
+  if (exceeded) {
+    upsellEl.textContent = t('upsellMessage')
+    upsellEl.style.display = 'block'
+    upsellEl.onclick = () => { el('upgrade-panel').style.display = 'block' }
+  } else {
+    upsellEl.style.display = 'none'
+  }
 }
 
 async function init() {
-  setLanguage(getDefaultLanguage())
+  // 저장된 언어 복원 또는 브라우저 기본 언어
+  const langData = await chrome.storage.local.get(STORAGE_KEYS.LANGUAGE)
+  const lang = langData[STORAGE_KEYS.LANGUAGE] || getDefaultLanguage()
+  setLanguage(lang)
+  const langSelect = el('lang-select') as HTMLSelectElement
+  langSelect.value = lang
   applyI18n()
 
   isPremium = await checkPremium()
@@ -104,11 +117,35 @@ async function init() {
 }
 
 function bindEvents() {
+  // 언어 선택
+  el('lang-select').addEventListener('change', (e) => {
+    const lang = (e.target as HTMLSelectElement).value
+    setLanguage(lang)
+    applyI18n()
+    updatePremiumUI()
+    showMessage('', '')
+    chrome.storage.local.set({ [STORAGE_KEYS.LANGUAGE]: lang })
+  })
+
   el('btn-monthly').addEventListener('click', () => handleCheckout('monthly'))
   el('btn-annual').addEventListener('click', () => handleCheckout('annual'))
 
+  // 배지 클릭 → 패널 토글
+  el('status-badge').addEventListener('click', () => {
+    if (isPremium) {
+      const panel = el('pro-panel')
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none'
+    } else {
+      const panel = el('upgrade-panel')
+      panel.style.display = panel.style.display === 'none' ? 'block' : 'none'
+    }
+  })
+
   el('btn-verify').addEventListener('click', async () => {
     const btn = el('btn-verify')
+    // verify 클릭 시 restore 섹션 닫기
+    el('restore-section').style.display = 'none'
+    showMessage('', '')
     btn.textContent = t('verifying')
     try {
       const result = await refreshStatus()
@@ -118,7 +155,7 @@ function bindEvents() {
       subStatus = result.status
       updatePremiumUI()
       showMessage(
-        result.premium ? t('restoreSuccess') : t('restoreFail'),
+        result.premium ? t('restoreSuccess') : t('verifyNotFound'),
         result.premium ? 'success' : 'error'
       )
     } catch {
@@ -128,18 +165,19 @@ function bindEvents() {
   })
 
   el('btn-restore-link').addEventListener('click', () => {
+    showMessage('', '')
     el('restore-section').style.display = 'flex'
     ;(el('restore-email') as HTMLInputElement).focus()
   })
 
   el('btn-restore-cancel').addEventListener('click', () => {
     el('restore-section').style.display = 'none'
-    el('upgrade-message').textContent = ''
+    showMessage('', '')
   })
 
   el('btn-restore-confirm').addEventListener('click', async () => {
     const email = (el('restore-email') as HTMLInputElement).value.trim()
-    if (!email || !email.includes('@') || !email.includes('.')) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       showMessage(t('invalidEmail'), 'error')
       return
     }

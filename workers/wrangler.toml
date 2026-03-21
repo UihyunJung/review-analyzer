@@ -3,12 +3,13 @@ main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
 [vars]
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+GEMINI_MODEL = "gemini-2.5-flash"
 PROMPT_VERSION = "v1"
 FREE_DAILY_LIMIT = "5"
+PRO_DAILY_LIMIT = "100"
 PADDLE_BACKEND_URL = "https://paddle-extensions-backend.vercel.app"
 
 # Secrets (set via `wrangler secret put`):
-# ANTHROPIC_API_KEY
+# GEMINI_API_KEY
 # SUPABASE_URL
 # SUPABASE_SERVICE_ROLE_KEY

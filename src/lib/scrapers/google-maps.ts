@@ -176,6 +176,22 @@ export function extractPlaceInfo(doc: Document, url: string): PlaceInfo {
   }
 }
 
+// --- 스크롤 가능한 부모 요소 찾기 (난독화 클래스 의존 제거) ---
+function findScrollableParent(element: Element): Element | null {
+  let el: Element | null = element
+  while (el) {
+    const style = getComputedStyle(el)
+    if (
+      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+      el.scrollHeight > el.clientHeight
+    ) {
+      return el
+    }
+    el = el.parentElement
+  }
+  return null
+}
+
 // --- 리뷰 패널 열기 ---
 async function openReviewPanel(doc: Document): Promise<Element | null> {
   // "All reviews" 버튼 또는 리뷰 수 버튼 클릭
@@ -187,10 +203,21 @@ async function openReviewPanel(doc: Document): Promise<Element | null> {
     reviewBtn.click()
   }
 
-  // 리뷰 패널 스크롤 영역이 나타날 때까지 대기
+  // 리뷰가 나타날 때까지 대기 (난독화 클래스 의존 제거)
   return new Promise((resolve) => {
     let attempts = 0
     const check = () => {
+      // 먼저 리뷰 아이템이 있는지 확인 (data-review-id는 안정적)
+      const firstReview = doc.querySelector(SELECTORS.REVIEW_ITEM)
+      if (firstReview) {
+        // 리뷰의 스크롤 가능한 부모 컨테이너를 찾음
+        const scrollable = findScrollableParent(firstReview)
+        if (scrollable) {
+          resolve(scrollable)
+          return
+        }
+      }
+      // fallback: 기존 셀렉터 시도
       const panel = doc.querySelector(SELECTORS.REVIEW_PANEL_SCROLLABLE)
       if (panel) {
         resolve(panel)
@@ -217,10 +244,16 @@ function expandAllReviews(doc: Document): void {
 
 // --- 무한 스크롤 로딩 ---
 async function scrollAndLoadReviews(panel: Element, maxReviews: number): Promise<void> {
+  // 리뷰 아이템의 스크롤 가능한 부모를 찾아서 스크롤 대상으로 사용
+  const firstReview = panel.querySelector(SELECTORS.REVIEW_ITEM)
+  const scrollTarget = firstReview ? findScrollableParent(firstReview) : panel
+
+  if (!scrollTarget) return
+
   let prevCount = 0
   let staleRounds = 0
 
-  while (staleRounds < 3) {
+  while (staleRounds < 5) {
     const currentCount = panel.querySelectorAll(SELECTORS.REVIEW_ITEM).length
     if (currentCount >= maxReviews) break
 
@@ -231,8 +264,8 @@ async function scrollAndLoadReviews(panel: Element, maxReviews: number): Promise
     }
     prevCount = currentCount
 
-    panel.scrollTop = panel.scrollHeight
-    await new Promise((r) => setTimeout(r, 400))
+    scrollTarget.scrollTop = scrollTarget.scrollHeight
+    await new Promise((r) => setTimeout(r, 800))
   }
 }
 

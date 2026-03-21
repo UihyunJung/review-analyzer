@@ -1,4 +1,4 @@
 {
   "extName": { "message": "場所評論分析器" },
-  "extDescription": { "message": "AI驅動的餐廳和場所評論分析。從Google Maps和Naver Place的評論中獲取評分、亮點和注意事項。" }
+  "extDescription": { "message": "Google Maps和Naver Place的AI評論分析。在場所頁面點擊右下角★按鈕，即可獲取評分、亮點和注意事項。" }
 }

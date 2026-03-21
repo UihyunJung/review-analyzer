@@ -11,8 +11,12 @@ export async function handleUsage(
 ): Promise<Response> {
   try {
     const identity = extractIdentity(request)
-    const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
     const today = new Date().toISOString().split('T')[0]
+
+    // Pro 체크 — Vercel /api/status (1분 캐시)
+    const installId = identity.deviceId
+    const isPro = await checkPremium(installId, env)
+    const limit = isPro ? parseInt(env.PRO_DAILY_LIMIT, 10) : parseInt(env.FREE_DAILY_LIMIT, 10)
 
     const filter = `device_id=eq.${encodeURIComponent(identity.deviceId)}`
 
@@ -22,17 +26,13 @@ export async function handleUsage(
 
     const count = result?.[0]?.count ?? 0
 
-    // Pro 체크 — Vercel /api/status (5분 캐시)
-    const installId = identity.deviceId
-    const isPro = await checkPremium(installId, env)
-
     return jsonResponse({
       success: true,
       data: {
         count,
         limit,
         isPro,
-        remaining: isPro ? 999 : Math.max(0, limit - count)
+        remaining: Math.max(0, limit - count)
       }
     })
   } catch (err) {

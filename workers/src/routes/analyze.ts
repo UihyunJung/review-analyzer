@@ -1,5 +1,5 @@
 import type { Env } from '../index'
-import { callClaude } from '../lib/claude'
+import { callGemini } from '../lib/gemini'
 import { supabaseRpc, supabaseQuery } from '../lib/supabase'
 import {
   validateRequestSize,
@@ -31,60 +31,53 @@ interface AnalyzeBody {
     category: string
   }
   site: string
+  lang?: string
 }
 
-function buildSystemPrompt(category: string, site: string): string {
-  if (site === 'naver_place') {
-    return `당신은 네이버 Place 리뷰 분석 전문가입니다. ${category || '장소'}의 리뷰를 분석합니다.
-반드시 유효한 JSON만 반환하세요 (마크다운, 코드블록 없이):
-{
-  "aspects": [
-    { "aspect": "맛", "score": 8.5, "summary": "간단한 요약", "keywords": ["키워드1", "키워드2"] },
-    { "aspect": "서비스", "score": 6.2, "summary": "간단한 요약", "keywords": ["키워드1"] },
-    { "aspect": "가성비", "score": 7.8, "summary": "간단한 요약", "keywords": ["키워드1"] },
-    { "aspect": "분위기", "score": 9.1, "summary": "간단한 요약", "keywords": ["키워드1"] }
-  ],
-  "highlights": ["장점 1", "장점 2", "장점 3"],
-  "warnings": ["주의점 1", "주의점 2", "주의점 3"]
+const LANG_NAMES: Record<string, string> = {
+  en: 'English', ko: '한국어', ja: '日本語',
+  'zh-CN': '简体中文', 'zh-TW': '繁體中文',
+  de: 'Deutsch', es: 'Español', fr: 'Français',
+  'pt-BR': 'Português', it: 'Italiano'
 }
-점수는 0-10. 해당 없는 측면은 생략. 각 요약은 1-2문장.`
-  }
 
-  return `You are a review analyst for Google Maps places. Analyze the provided reviews for a ${category || 'place'}.
-Reviews may be in multiple languages — analyze all regardless of language. Respond in English.
-Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
+function buildSystemPrompt(category: string, site: string, lang: string): string {
+  const langName = LANG_NAMES[lang] || 'English'
+
+  return `You are a review analyst for ${site === 'naver_place' ? 'Naver Place' : 'Google Maps'} places. Analyze the provided reviews for a ${category || 'place'}.
+Reviews may be in multiple languages — analyze all regardless of language.
+
+CRITICAL RULES:
+1. Return ONLY valid JSON. No markdown, no code blocks, no text before or after the JSON.
+2. All JSON keys MUST be exactly as shown below (English, lowercase). Never translate or change the keys.
+3. All JSON string values (summary, keywords, highlights, warnings) MUST be written in ${langName}.
+
+Return this exact JSON structure:
 {
   "aspects": [
-    { "aspect": "food", "score": 8.5, "summary": "Brief summary", "keywords": ["keyword1", "keyword2"] },
-    { "aspect": "service", "score": 6.2, "summary": "Brief summary", "keywords": ["keyword1"] },
-    { "aspect": "value", "score": 7.8, "summary": "Brief summary", "keywords": ["keyword1"] },
-    { "aspect": "ambiance", "score": 9.1, "summary": "Brief summary", "keywords": ["keyword1"] }
+    { "aspect": "food", "score": 8.5, "summary": "Brief summary in ${langName}", "keywords": ["keyword1", "keyword2"] },
+    { "aspect": "service", "score": 6.2, "summary": "Brief summary in ${langName}", "keywords": ["keyword1"] },
+    { "aspect": "value", "score": 7.8, "summary": "Brief summary in ${langName}", "keywords": ["keyword1"] },
+    { "aspect": "ambiance", "score": 9.1, "summary": "Brief summary in ${langName}", "keywords": ["keyword1"] }
   ],
-  "highlights": ["Top positive point 1", "Top positive point 2", "Top positive point 3"],
-  "warnings": ["Watch out for 1", "Watch out for 2", "Watch out for 3"]
+  "highlights": ["Point 1 in ${langName}", "Point 2", "Point 3"],
+  "warnings": ["Warning 1 in ${langName}", "Warning 2", "Warning 3"]
 }
+The "aspect" field MUST be one of exactly these values: "food", "service", "value", "ambiance". Do NOT use any other aspect names.
 Scores are 0-10. Only include relevant aspects (e.g. skip "food" for a hotel).
 Be concise. Each summary should be 1-2 sentences max.`
 }
 
-function buildProSystemPrompt(category: string, site: string): string {
-  const base = buildSystemPrompt(category, site)
-  const proAddition = site === 'naver_place'
-    ? `
+function buildProSystemPrompt(category: string, site: string, lang: string): string {
+  const langName = LANG_NAMES[lang] || 'English'
+  const base = buildSystemPrompt(category, site, lang)
+  return base + `
 
-추가로 다음 필드도 JSON에 포함하세요:
-"trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "...", "direction": "improving|declining|stable", "reason": "..." },
-"waitTime": { "estimate": "대기시간 추정 또는 insufficient data", "basedOn": 참조한리뷰수 },
-"bestFor": ["데이트", "가족모임", "회식"]
-대기시간 언급이 3건 미만이면 estimate를 "insufficient data"로.`
-    : `
-
-Also include these additional fields in the JSON:
-"trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "...", "direction": "improving|declining|stable", "reason": "..." },
-"waitTime": { "estimate": "estimated wait or insufficient data", "basedOn": numberOfReviewsMentioningWait },
-"bestFor": ["romantic dinner", "business lunch", "family"]
+Also include these additional fields in the JSON (keys in English, values in ${langName}):
+"trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "positive|negative|mixed", "direction": "improving|declining|stable", "reason": "reason in ${langName}" },
+"waitTime": { "estimate": "estimated wait in ${langName} or insufficient data", "basedOn": numberOfReviewsMentioningWait },
+"bestFor": ["suggestion1 in ${langName}", "suggestion2", "suggestion3"]
 If fewer than 3 reviews mention wait times, return estimate as "insufficient data".`
-  return base + proAddition
 }
 
 function buildUserMessage(reviews: Review[]): string {
@@ -135,13 +128,50 @@ export async function handleAnalyze(
       return errorResponse('Request body too large', 413)
     }
 
-    // 4. Pro 체크 — Vercel /api/status (5분 캐시). 카운트 증가 전에 확인.
+    // 4. Pro 체크 + lang 검증
     const installId = identity.deviceId
     const isPro = await checkPremium(installId, env)
+    const placeId = body.placeInfo?.placeId ?? ''
+    const site = body.site ?? 'google_maps'
+    const lang = LANG_NAMES[body.lang || 'en'] ? (body.lang || 'en') : 'en'
 
-    // 5. 사용량 카운트 (Pro는 건너뜀)
-    const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
-    if (!isPro) {
+    // 5. 캐시 확인 — 같은 place_id + site + lang + isPro의 24시간 이내 분석 결과 재사용
+    let cachedSummary: Record<string, unknown> | null = null
+    let cachedModel = ''
+
+    if (placeId) {
+      try {
+        const cacheQuery = `analysis_history?place_id=eq.${encodeURIComponent(placeId)}&site=eq.${encodeURIComponent(site)}&created_at=gte.${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()}&order=created_at.desc&limit=10`
+        const cacheResult = (await supabaseQuery(env, cacheQuery)) as Array<{
+          summary: Record<string, unknown>
+          model: string
+          prompt_version: string
+        }>
+        const match = cacheResult?.find(
+          (r) =>
+            r.prompt_version === env.PROMPT_VERSION &&
+            (r.summary as Record<string, unknown>)?._lang === lang &&
+            (r.summary as Record<string, unknown>)?._isPro === isPro
+        )
+        if (match) {
+          cachedSummary = match.summary
+          cachedModel = match.model
+        }
+      } catch {
+        // 캐시 조회 실패 시 무시 → API 호출로 진행
+      }
+    }
+
+    let summary: Record<string, unknown>
+    let model: string
+
+    if (cachedSummary) {
+      // 캐시 히트 — 사용량 카운트 없이 즉시 반환
+      summary = cachedSummary
+      model = cachedModel
+    } else {
+      // 6. 사용량 카운트 (캐시 미스일 때만)
+      const limit = isPro ? parseInt(env.PRO_DAILY_LIMIT, 10) : parseInt(env.FREE_DAILY_LIMIT, 10)
       const usageParams = { p_device_id: identity.deviceId, p_limit: limit }
       const usageResult = (await supabaseRpc(env, 'increment_usage', usageParams)) as Array<{
         new_count: number
@@ -154,76 +184,73 @@ export async function handleAnalyze(
           402
         )
       }
-    }
 
-    // 6. Claude API 호출 (실패 시 카운트 롤백)
-    const systemPrompt = isPro
-      ? buildProSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
-      : buildSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
-    const userMessage = buildUserMessage(body.reviews)
-    let claudeText: string
-    let model: string
-    try {
-      const result = await callClaude(env, systemPrompt, userMessage)
-      claudeText = result.text
-      model = result.model
-    } catch (err) {
-      // Claude API 실패 → 카운트 롤백 (Pro가 아닌 경우만)
-      if (!isPro) {
+      // 7. Gemini API 호출 (실패 시 카운트 롤백)
+      const systemPrompt = isPro
+        ? buildProSystemPrompt(body.placeInfo?.category ?? '', site, lang)
+        : buildSystemPrompt(body.placeInfo?.category ?? '', site, lang)
+      const userMessage = buildUserMessage(body.reviews)
+      let geminiText: string
+      try {
+        const result = await callGemini(env, systemPrompt, userMessage)
+        geminiText = result.text
+        model = result.model
+      } catch (err) {
         try {
           await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId })
         } catch {
           console.error('[Rollback failed]', err)
         }
+        return errorResponse('AI service temporarily unavailable', 502)
       }
-      const msg = err instanceof Error ? err.message : 'Claude API failed'
-      return errorResponse(msg, 502)
-    }
 
-    // 7. JSON 파싱
-    let analysisResult: Record<string, unknown>
-    try {
-      analysisResult = JSON.parse(claudeText)
-    } catch {
-      const jsonMatch = claudeText.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        analysisResult = JSON.parse(jsonMatch[0])
-      } else {
-        return errorResponse('Failed to parse AI response', 502)
+      // 8. JSON 파싱
+      let analysisResult: Record<string, unknown>
+      try {
+        analysisResult = JSON.parse(geminiText)
+      } catch {
+        const jsonMatch = geminiText.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          try {
+            analysisResult = JSON.parse(jsonMatch[0])
+          } catch {
+            try { await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId }) } catch { /* ignore */ }
+            return errorResponse('Failed to parse AI response', 502)
+          }
+        } else {
+          try { await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId }) } catch { /* ignore */ }
+          return errorResponse('Failed to parse AI response', 502)
+        }
+      }
+
+      // 9. languageBreakdown 서버사이드 집계
+      const languageBreakdown = computeLanguageBreakdown(body.reviews)
+      summary = { ...analysisResult, languageBreakdown, _lang: lang, _isPro: isPro }
+
+      // 10. analysis_history에 저장 (원문 미저장)
+      try {
+        await supabaseQuery(env, 'analysis_history', {
+          method: 'POST',
+          body: {
+            device_id: identity.deviceId,
+            place_id: placeId,
+            place_name: body.placeInfo?.name ?? '',
+            place_url: body.placeInfo?.url ?? '',
+            place_category: body.placeInfo?.category ?? '',
+            summary,
+            review_count: body.reviews.length,
+            site,
+            model,
+            prompt_version: env.PROMPT_VERSION
+          },
+          headers: { Prefer: 'return=minimal' }
+        })
+      } catch {
+        // 히스토리 저장 실패해도 분석 결과는 반환
       }
     }
 
-    // 8. languageBreakdown 서버사이드 집계
-    const languageBreakdown = computeLanguageBreakdown(body.reviews)
-
-    const summary = {
-      ...analysisResult,
-      languageBreakdown
-    }
-
-    // 9. analysis_history에 저장 (원문 미저장)
-    try {
-      await supabaseQuery(env, 'analysis_history', {
-        method: 'POST',
-        body: {
-          device_id: identity.deviceId,
-          place_id: body.placeInfo?.placeId ?? '',
-          place_name: body.placeInfo?.name ?? '',
-          place_url: body.placeInfo?.url ?? '',
-          place_category: body.placeInfo?.category ?? '',
-          summary,
-          review_count: body.reviews.length,
-          site: body.site ?? 'google_maps',
-          model,
-          prompt_version: env.PROMPT_VERSION
-        },
-        headers: { Prefer: 'return=minimal' }
-      })
-    } catch {
-      // 히스토리 저장 실패해도 분석 결과는 반환
-    }
-
-    // 10. 응답 (isPro를 서버에서 반환 — 클라이언트가 Pro UI 표시에 사용)
+    // 11. 응답
     return jsonResponse({
       success: true,
       data: {
@@ -231,7 +258,8 @@ export async function handleAnalyze(
         reviewCount: body.reviews.length,
         model,
         promptVersion: env.PROMPT_VERSION,
-        isPro
+        isPro,
+        cached: !!cachedSummary
       }
     })
   } catch (err) {

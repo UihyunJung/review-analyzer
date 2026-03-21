@@ -44,20 +44,22 @@ async function handleClick(btn: HTMLButtonElement) {
       return
     }
 
+    // 사용자 제스처 컨텍스트에서 SidePanel 먼저 열기
+    chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' })
+
     chrome.runtime.sendMessage(
-      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'naver_place' },
+      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'naver_place', lang: getDefaultLanguage() },
       (response) => {
         loading = false
         if (response?.success) {
           btn.textContent = '\u2713 ' + t('doneButton')
           btn.style.background = '#43a047'
-          chrome.runtime.sendMessage({ type: 'OPEN_SIDE_PANEL' })
           setTimeout(() => resetButton(btn), 3000)
         } else if (response?.exceeded) {
           btn.textContent = t('upgradeButton')
           btn.style.background = '#ff9800'
         } else {
-          btn.textContent = response?.error || t('analysisFailed')
+          btn.textContent = t('analysisFailed')
           btn.style.background = '#e53935'
           setTimeout(() => resetButton(btn), 5000)
         }

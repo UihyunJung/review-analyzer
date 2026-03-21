@@ -1,5 +1,6 @@
 import { getDefaultLanguage, setLanguage, t, applyI18n } from './i18n.js'
 import { STORAGE_KEYS } from './config.js'
+import { openCheckout } from './subscription.js'
 
 const el = (id: string) => document.getElementById(id)!
 
@@ -207,7 +208,7 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
   const proSection = el('pro-section')
   const proGate = el('pro-gate')
 
-  if (data.trend || data.waitTime || data.bestFor) {
+  if (isPro && (data.trend || data.waitTime || data.bestFor)) {
     proSection.style.display = 'block'
     proGate.style.display = 'none'
     renderTrend(data.trend)
@@ -216,6 +217,9 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
   } else if (!isPro) {
     proSection.style.display = 'none'
     proGate.style.display = 'block'
+  } else {
+    proSection.style.display = 'none'
+    proGate.style.display = 'none'
   }
 
   const langSection = el('lang-section')
@@ -232,6 +236,8 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
         .sort(([, a]: any, [, b]: any) => b - a)
         .map(([lang, count]: any) => `${Math.round((count / total) * 100)}% ${lang.toUpperCase()}`)
         .join(', ')
+  } else {
+    langSection.style.display = 'none'
   }
 
   el('review-count').textContent = t('basedOnReviews').replace(
@@ -256,22 +262,47 @@ async function init() {
     showState('error')
     el('state-error').textContent = analysis.exceeded
       ? t('limitReached')
-      : analysis.error || t('analysisFailed')
+      : t('analysisFailed')
   } else {
     renderAnalysis(analysis.data, analysis.placeInfo, isPro)
   }
 
+  // Pro 게이트 버튼 — 이벤트 위임 (display:none 상태에서도 동작)
+  document.addEventListener('click', (e) => {
+    if ((e.target as Element).closest('.pro-gate-btn')) {
+      openCheckout('monthly').catch(() => {})
+    }
+  })
+
+  // 메시지로 실시간 반영
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'ANALYSIS_RESULT' && msg.data) {
       if (msg.data.success && msg.data.data) {
         renderAnalysis(msg.data.data, msg.data.placeInfo, isPro)
       } else {
         showState('error')
-        el('state-error').textContent = msg.data.error || t('analysisFailed')
+        el('state-error').textContent = msg.data.exceeded ? t('limitReached') : t('analysisFailed')
       }
     }
     if (msg.type === 'ANALYSIS_LOADING') {
       showState('loading')
+    }
+  })
+
+  // storage 변경 시에도 최신 결과 반영 (메시지 타이밍 누락 대비)
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes[STORAGE_KEYS.LAST_ANALYSIS]) {
+      const analysis = changes[STORAGE_KEYS.LAST_ANALYSIS].newValue
+      if (!analysis) {
+        showState('empty')
+      } else if (analysis.success && analysis.data) {
+        renderAnalysis(analysis.data, analysis.placeInfo, isPro)
+      } else {
+        showState('error')
+        el('state-error').textContent = analysis.exceeded
+          ? t('limitReached')
+          : t('analysisFailed')
+      }
     }
   })
 }

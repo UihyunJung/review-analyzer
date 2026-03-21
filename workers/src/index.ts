@@ -3,12 +3,13 @@ import { handleUsage } from './routes/usage'
 import { isRateLimited } from './lib/rate-limit'
 
 export interface Env {
-  ANTHROPIC_API_KEY: string
+  GEMINI_API_KEY: string
+  GEMINI_MODEL: string
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
-  CLAUDE_MODEL: string
   PROMPT_VERSION: string
   FREE_DAILY_LIMIT: string
+  PRO_DAILY_LIMIT: string
   PADDLE_BACKEND_URL: string
   ALLOWED_ORIGINS?: string
 }
@@ -62,13 +63,13 @@ export default {
     const jsonResponse = makeJsonResponse(origin)
     const errorResponse = makeErrorResponse(origin)
 
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders(origin) })
-    }
-
     const clientIp = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     if (isRateLimited(clientIp)) {
       return errorResponse('Too many requests', 429)
+    }
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: corsHeaders(origin) })
     }
 
     try {

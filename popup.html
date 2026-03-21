@@ -8,18 +8,60 @@
   <div class="popup">
     <header class="popup-header">
       <div class="header-row">
-        <h1 data-i18n="title">Place Review Analyzer</h1>
-        <div id="auth-area"></div>
+        <div class="header-title">
+          <img src="icons/icon-48.png" alt="" class="header-icon">
+          <h1 data-i18n="title">Place Review Analyzer</h1>
+        </div>
+        <span id="status-badge" class="status-badge status-free" data-i18n="free">Free</span>
       </div>
       <p class="subtitle" id="subtitle" data-i18n="subtitle">AI-powered restaurant insights</p>
+      <select id="lang-select" class="lang-select">
+        <option value="en">EN</option>
+        <option value="ko">한국어</option>
+        <option value="ja">日本語</option>
+        <option value="zh-CN">简体中文</option>
+        <option value="zh-TW">繁體中文</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+        <option value="pt-BR">Português</option>
+        <option value="it">Italiano</option>
+      </select>
     </header>
 
-    <!-- 구독 상태 배지 -->
-    <div id="status-badge" class="status-badge status-free" data-i18n="free">Free</div>
+    <!-- 업그레이드 패널 (배지 클릭 시 토글, 기본 숨김) -->
+    <section id="upgrade-panel" class="upgrade-panel" style="display:none">
+      <p data-i18n="upgradeDesc">Unlock unlimited analyses + place comparison</p>
+      <div class="plan-buttons">
+        <button id="btn-monthly" class="plan-btn" data-i18n="monthlyPlan">$3.99/mo</button>
+        <button id="btn-annual" class="plan-btn plan-annual" data-i18n="annualPlan">$29.99/yr — Save 37%</button>
+      </div>
+      <details class="already-paid">
+        <summary data-i18n="alreadyPaid">Already paid?</summary>
+        <div class="already-paid-actions">
+          <button id="btn-verify" class="link-btn" data-i18n="verifyPurchase">Verify purchase</button>
+          <span class="separator">·</span>
+          <button id="btn-restore-link" class="link-btn" data-i18n="restoreLink">Restore purchase</button>
+        </div>
+        <div id="restore-section" class="restore-section" style="display:none">
+          <input type="email" id="restore-email" data-i18n-placeholder="emailPlaceholder" placeholder="Email used for purchase">
+          <div class="restore-buttons">
+            <button id="btn-restore-confirm" class="small-btn" data-i18n="restore">Restore</button>
+            <button id="btn-restore-cancel" class="small-btn secondary" data-i18n="cancel">Cancel</button>
+          </div>
+        </div>
+        <p id="upgrade-message" class="upgrade-message"></p>
+      </details>
+    </section>
 
-    <!-- Pro 정보 패널 (Pro 사용자만) -->
+    <!-- Pro 정보 패널 (배지 클릭 시 토글, 기본 숨김) -->
     <div id="pro-panel" class="pro-panel" style="display:none">
       <p id="pro-panel-text"></p>
+    </div>
+
+    <!-- 동기화 실패 알림 -->
+    <div id="sync-notice" class="sync-notice" style="display:none">
+      <span data-i18n="syncFailed">Unable to sync. Using cached data.</span>
     </div>
 
     <!-- 사용량 -->
@@ -29,38 +71,21 @@
         <span class="usage-count" id="usage-count">0 / 5</span>
       </div>
       <div class="usage-bar">
-        <div class="usage-fill" id="usage-fill"></div>
+        <div class="usage-fill" id="usage-fill" style="width:0"></div>
       </div>
-      <p class="usage-remaining" id="usage-remaining" data-i18n="remaining">5 analyses remaining</p>
+      <p class="usage-remaining" id="usage-remaining">&nbsp;</p>
+      <p class="usage-upsell" id="usage-upsell" style="display:none"></p>
       <p class="usage-reset" data-i18n="resetsAt">Resets daily at midnight UTC</p>
     </section>
 
-    <!-- 동기화 실패 알림 -->
-    <div id="sync-notice" class="sync-notice" style="display:none">
-      <span data-i18n="syncFailed">Unable to sync. Using cached data.</span>
-    </div>
-
-    <!-- 업그레이드 패널 (Free 사용자만) -->
-    <section id="upgrade-panel" class="upgrade-panel">
-      <p data-i18n="upgradeDesc">Unlock unlimited analyses + place comparison</p>
-      <div class="plan-buttons">
-        <button id="btn-monthly" class="plan-btn" data-i18n="monthlyPlan">$3.99/mo</button>
-        <button id="btn-annual" class="plan-btn plan-annual" data-i18n="annualPlan">$29.99/yr — Save 37%</button>
-      </div>
-      <div class="upgrade-actions">
-        <button id="btn-verify" class="link-btn" data-i18n="verifyPurchase">Verify purchase</button>
-        <span class="separator">·</span>
-        <button id="btn-restore-link" class="link-btn" data-i18n="restoreLink">Restore purchase</button>
-      </div>
-      <!-- 복원 입력 -->
-      <div id="restore-section" class="restore-section" style="display:none">
-        <input type="email" id="restore-email" data-i18n-placeholder="emailPlaceholder" placeholder="Email used for purchase">
-        <div class="restore-buttons">
-          <button id="btn-restore-confirm" class="small-btn" data-i18n="restore">Restore</button>
-          <button id="btn-restore-cancel" class="small-btn secondary" data-i18n="cancel">Cancel</button>
-        </div>
-      </div>
-      <p id="upgrade-message" class="upgrade-message"></p>
+    <!-- 사용법 가이드 -->
+    <section class="how-to">
+      <h2 data-i18n="howToUseTitle">How to Use</h2>
+      <ol class="how-to-steps">
+        <li data-i18n="howToStep1">Open a place page on Google Maps</li>
+        <li data-i18n="howToStep2">Click the "★ Analyze This Place" button at the bottom-right</li>
+        <li data-i18n="howToStep3">View AI analysis results in the side panel</li>
+      </ol>
     </section>
 
     <footer class="popup-footer">

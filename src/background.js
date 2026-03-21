@@ -26,17 +26,17 @@ const DEFAULT_USAGE = {
 chrome.runtime.onInstalled.addListener(async () => {
   await ensureInstallId()
   chrome.alarms.create('check-premium', { periodInMinutes: 30 })
-  await checkSubscriptionStatus()
+  await checkSubscriptionStatus(true)
 })
 
 // === onStartup ===
 chrome.runtime.onStartup.addListener(async () => {
-  await checkSubscriptionStatus()
+  await checkSubscriptionStatus(true)
 })
 
 // === onAlarm ===
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'check-premium') checkSubscriptionStatus()
+  if (alarm.name === 'check-premium') checkSubscriptionStatus(true)
 })
 
 // === 메시지 핸들러 ===
@@ -72,14 +72,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.type === 'OPEN_SIDE_PANEL') {
     if (sender.tab?.id) {
-      chrome.sidePanel.open({ tabId: sender.tab.id }).catch(() => {})
+      chrome.sidePanel.open({ tabId: sender.tab.id }).catch((err) => {
+        console.error('[SidePanel open failed]', err)
+      })
     }
     return false
   }
 })
 
-// === 구독 상태 체크 ===
-async function checkSubscriptionStatus() {
+// === 구독 상태 체크 (5분 TTL 캐시) ===
+let lastCheckTime = 0
+const CHECK_CACHE_TTL = 5 * 60 * 1000
+
+async function checkSubscriptionStatus(force = false) {
+  const now = Date.now()
+  if (!force && now - lastCheckTime < CHECK_CACHE_TTL) return
+  lastCheckTime = now
+
   try {
     const installId = await ensureInstallId()
 
@@ -102,6 +111,10 @@ async function checkSubscriptionStatus() {
 // === 분석 핸들러 ===
 async function handleAnalyze(request, sendResponse) {
   try {
+    // 이전 결과 초기화 + SidePanel에 로딩 상태 전송
+    await chrome.storage.local.remove(STORAGE_KEYS.LAST_ANALYSIS)
+    chrome.runtime.sendMessage({ type: 'ANALYSIS_LOADING' }).catch(() => {})
+
     const installId = await ensureInstallId()
 
     const res = await fetch(`${WORKERS_BASE}/analyze`, {
@@ -110,7 +123,8 @@ async function handleAnalyze(request, sendResponse) {
       body: JSON.stringify({
         reviews: request.reviews,
         placeInfo: request.placeInfo,
-        site: request.site
+        site: request.site,
+        lang: request.lang || 'en'
       })
     })
 
