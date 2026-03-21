@@ -37,6 +37,7 @@ async function handleClick(btn: HTMLButtonElement) {
     const { reviews, placeInfo } = await extractNaverPlaceReviews(document, window.location.href)
 
     if (reviews.length === 0) {
+      loading = false
       btn.textContent = t('noReviews')
       btn.style.background = '#e53935'
       setTimeout(() => resetButton(btn), 3000)

@@ -110,7 +110,7 @@ export async function handleAnalyze(
   errorResponse: (message: string, status: number) => Response
 ): Promise<Response> {
   try {
-    // 1. 인증: JWT → user_id 또는 X-Device-ID → device_id
+    // 1. 인증: X-Device-ID → installId
     const identity = extractIdentity(request)
 
     // 2. 요청 크기 검증
@@ -135,26 +135,28 @@ export async function handleAnalyze(
       return errorResponse('Request body too large', 413)
     }
 
-    // 4. 사용량 원자적 카운트 증가 (Race condition 방지)
-    const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
-    const usageParams = { p_device_id: identity.deviceId, p_limit: limit }
-    const usageResult = (await supabaseRpc(env, 'increment_usage', usageParams)) as Array<{
-      new_count: number
-      exceeded: boolean
-    }>
-
-    // Pro 체크 — Vercel /api/status 호출 (5분 캐시)
+    // 4. Pro 체크 — Vercel /api/status (5분 캐시). 카운트 증가 전에 확인.
     const installId = identity.deviceId
     const isPro = await checkPremium(installId, env)
 
-    if (!isPro && usageResult[0]?.exceeded) {
-      return jsonResponse(
-        { success: false, exceeded: true, error: 'Daily analysis limit reached' },
-        402
-      )
+    // 5. 사용량 카운트 (Pro는 건너뜀)
+    const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
+    if (!isPro) {
+      const usageParams = { p_device_id: identity.deviceId, p_limit: limit }
+      const usageResult = (await supabaseRpc(env, 'increment_usage', usageParams)) as Array<{
+        new_count: number
+        exceeded: boolean
+      }>
+
+      if (usageResult[0]?.exceeded) {
+        return jsonResponse(
+          { success: false, exceeded: true, error: 'Daily analysis limit reached' },
+          402
+        )
+      }
     }
 
-    // 5. Claude API 호출 (실패 시 카운트 롤백)
+    // 6. Claude API 호출 (실패 시 카운트 롤백)
     const systemPrompt = isPro
       ? buildProSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
       : buildSystemPrompt(body.placeInfo?.category ?? '', body.site ?? 'google_maps')
@@ -166,12 +168,13 @@ export async function handleAnalyze(
       claudeText = result.text
       model = result.model
     } catch (err) {
-      // Claude API 실패 → 카운트 롤백
-      try {
-        const rollbackParams = { p_device_id: identity.deviceId }
-        await supabaseRpc(env, 'decrement_usage', rollbackParams)
-      } catch {
-        console.error('[Rollback failed]', err)
+      // Claude API 실패 → 카운트 롤백 (Pro가 아닌 경우만)
+      if (!isPro) {
+        try {
+          await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId })
+        } catch {
+          console.error('[Rollback failed]', err)
+        }
       }
       const msg = err instanceof Error ? err.message : 'Claude API failed'
       return errorResponse(msg, 502)

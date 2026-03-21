@@ -1,4 +1,11 @@
-import { API_BASE, WORKERS_BASE, STORAGE_KEYS } from './js/config.js'
+import { API_BASE, WORKERS_BASE, STORAGE_KEYS, FREE_DAILY_LIMIT } from './js/config.js'
+
+const DEFAULT_USAGE = {
+  count: 0,
+  limit: FREE_DAILY_LIMIT,
+  isPro: false,
+  remaining: FREE_DAILY_LIMIT
+}
 
 // === onInstalled ===
 chrome.runtime.onInstalled.addListener(async () => {
@@ -113,13 +120,11 @@ async function handleAnalyze(request, sendResponse) {
           exceeded: result.exceeded || false
         }
 
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.LAST_ANALYSIS]: {
-        ...response,
-        placeInfo: request.placeInfo,
-        timestamp: Date.now()
-      }
-    })
+    const storedResult = { ...response, placeInfo: request.placeInfo, timestamp: Date.now() }
+    await chrome.storage.local.set({ [STORAGE_KEYS.LAST_ANALYSIS]: storedResult })
+
+    // SidePanel에 실시간 메시지 전송 (열려있으면 즉시 반영)
+    chrome.runtime.sendMessage({ type: 'ANALYSIS_RESULT', data: storedResult }).catch(() => {})
 
     sendResponse(response)
   } catch (error) {
@@ -134,7 +139,7 @@ async function handleGetUsage(sendResponse) {
     const installId = data[STORAGE_KEYS.INSTALL_ID] || ''
 
     if (!installId) {
-      sendResponse({ success: true, data: { count: 0, limit: 5, isPro: false, remaining: 5 } })
+      sendResponse({ success: true, data: DEFAULT_USAGE })
       return
     }
 
@@ -148,14 +153,14 @@ async function handleGetUsage(sendResponse) {
       const cached = await chrome.storage.local.get(STORAGE_KEYS.USAGE_CACHE)
       sendResponse({
         success: true,
-        data: cached[STORAGE_KEYS.USAGE_CACHE] || { count: 0, limit: 5, isPro: false, remaining: 5 }
+        data: cached[STORAGE_KEYS.USAGE_CACHE] || DEFAULT_USAGE
       })
     }
   } catch {
     const cached = await chrome.storage.local.get(STORAGE_KEYS.USAGE_CACHE)
     sendResponse({
       success: true,
-      data: cached[STORAGE_KEYS.USAGE_CACHE] || { count: 0, limit: 5, isPro: false, remaining: 5 }
+      data: cached[STORAGE_KEYS.USAGE_CACHE] || DEFAULT_USAGE
     })
   }
 }

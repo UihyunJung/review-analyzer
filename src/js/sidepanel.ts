@@ -16,11 +16,15 @@ function showState(state: 'loading' | 'empty' | 'error' | 'result') {
   })
 }
 
+function clearChildren(element: Element) {
+  element.replaceChildren()
+}
+
 function renderAspects(
   aspects: Array<{ aspect: string; score: number; summary: string; keywords: string[] }>
 ) {
   const container = el('aspects-container')
-  container.innerHTML = ''
+  clearChildren(container)
 
   for (const a of aspects) {
     const config = ASPECT_CONFIG[a.aspect] || { color: '#667eea', icon: '\u2B50' }
@@ -30,16 +34,36 @@ function renderAspects(
     const card = document.createElement('div')
     card.className = 'aspect-card'
 
+    // Header (createElement only — no innerHTML)
     const header = document.createElement('div')
     header.className = 'aspect-header'
-    header.innerHTML = `<span class="aspect-icon">${config.icon}</span><span class="aspect-name"></span><span class="aspect-score" style="color:${config.color}"></span>`
-    header.querySelector('.aspect-name')!.textContent = name
-    header.querySelector('.aspect-score')!.textContent = a.score.toFixed(1)
 
+    const iconSpan = document.createElement('span')
+    iconSpan.className = 'aspect-icon'
+    iconSpan.textContent = config.icon
+    header.appendChild(iconSpan)
+
+    const nameSpan = document.createElement('span')
+    nameSpan.className = 'aspect-name'
+    nameSpan.textContent = name
+    header.appendChild(nameSpan)
+
+    const scoreSpan = document.createElement('span')
+    scoreSpan.className = 'aspect-score'
+    scoreSpan.style.color = config.color
+    scoreSpan.textContent = a.score.toFixed(1)
+    header.appendChild(scoreSpan)
+
+    // Bar
     const barBg = document.createElement('div')
     barBg.className = 'aspect-bar-bg'
-    barBg.innerHTML = `<div class="aspect-bar-fill" style="width:${pct}%;background:${config.color}"></div>`
+    const barFill = document.createElement('div')
+    barFill.className = 'aspect-bar-fill'
+    barFill.style.width = `${pct}%`
+    barFill.style.background = config.color
+    barBg.appendChild(barFill)
 
+    // Summary
     const summary = document.createElement('p')
     summary.className = 'aspect-summary'
     summary.textContent = a.summary
@@ -66,10 +90,10 @@ function renderAspects(
   }
 }
 
-function renderList(containerId: string, sectionId: string, items: string[], _className: string) {
+function renderList(containerId: string, sectionId: string, items: string[]) {
   const list = el(containerId)
   const section = el(sectionId)
-  list.innerHTML = ''
+  clearChildren(list)
   if (!items?.length) {
     section.style.display = 'none'
     return
@@ -84,36 +108,62 @@ function renderList(containerId: string, sectionId: string, items: string[], _cl
 
 function renderTrend(trend: { direction: string; reason: string } | undefined) {
   const container = el('trend-container')
-  container.innerHTML = ''
+  clearChildren(container)
   if (!trend) return
 
-  const config: Record<string, { icon: string; label: string; cls: string }> = {
+  const trendConfig: Record<string, { icon: string; label: string; cls: string }> = {
     improving: { icon: '\u2191', label: t('trendImproving'), cls: 'trend-improving' },
     declining: { icon: '\u2193', label: t('trendDeclining'), cls: 'trend-declining' },
     stable: { icon: '\u2192', label: t('trendStable'), cls: 'trend-stable' }
   }
-  const c = config[trend.direction] || config.stable
+  const c = trendConfig[trend.direction] || trendConfig.stable
 
   const div = document.createElement('div')
   div.className = `trend-badge ${c.cls}`
-  div.innerHTML = `<div class="trend-header"><span class="trend-icon">${c.icon}</span><span class="trend-label"></span></div><p class="trend-reason"></p>`
-  div.querySelector('.trend-label')!.textContent = c.label
-  div.querySelector('.trend-reason')!.textContent = trend.reason
+
+  const header = document.createElement('div')
+  header.className = 'trend-header'
+  const iconSpan = document.createElement('span')
+  iconSpan.className = 'trend-icon'
+  iconSpan.textContent = c.icon
+  header.appendChild(iconSpan)
+  const labelSpan = document.createElement('span')
+  labelSpan.className = 'trend-label'
+  labelSpan.textContent = c.label
+  header.appendChild(labelSpan)
+  div.appendChild(header)
+
+  const reason = document.createElement('p')
+  reason.className = 'trend-reason'
+  reason.textContent = trend.reason
+  div.appendChild(reason)
+
   container.appendChild(div)
 }
 
 function renderWaitTime(waitTime: { estimate: string; basedOn: number } | undefined) {
   const container = el('waittime-container')
-  container.innerHTML = ''
+  clearChildren(container)
   if (!waitTime) return
 
   const hasData = waitTime.basedOn > 0
   const div = document.createElement('div')
   div.className = 'waittime'
-  div.innerHTML = `<div class="waittime-header">\u23F1\uFE0F <span style="font-size:13px;font-weight:600;color:#6a1b9a">${t('waitTime')}</span></div><p class="waittime-estimate"></p>`
-  div.querySelector('.waittime-estimate')!.textContent = hasData
-    ? waitTime.estimate
-    : t('insufficientData')
+
+  const header = document.createElement('div')
+  header.className = 'waittime-header'
+  header.textContent = '\u23F1\uFE0F '
+  const label = document.createElement('span')
+  label.style.cssText = 'font-size:13px;font-weight:600;color:#6a1b9a'
+  label.textContent = t('waitTime')
+  header.appendChild(label)
+  div.appendChild(header)
+
+  const estimate = document.createElement('p')
+  estimate.className = 'waittime-estimate'
+  estimate.textContent = hasData ? waitTime.estimate : t('insufficientData')
+  div.appendChild(estimate)
+
   if (hasData) {
     const note = document.createElement('p')
     note.className = 'waittime-note'
@@ -125,13 +175,13 @@ function renderWaitTime(waitTime: { estimate: string; basedOn: number } | undefi
 
 function renderBestFor(tags: string[] | undefined) {
   const container = el('bestfor-container')
-  container.innerHTML = ''
+  clearChildren(container)
   if (!tags?.length) return
 
-  const label = document.createElement('p')
-  label.style.cssText = 'font-size:13px;font-weight:600;color:#333;margin-bottom:6px'
-  label.textContent = t('bestFor')
-  container.appendChild(label)
+  const labelEl = document.createElement('p')
+  labelEl.style.cssText = 'font-size:13px;font-weight:600;color:#333;margin-bottom:6px'
+  labelEl.textContent = t('bestFor')
+  container.appendChild(labelEl)
 
   const tagsDiv = document.createElement('div')
   tagsDiv.className = 'bestfor-tags'
@@ -151,10 +201,9 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
   el('place-category').textContent = placeInfo?.category || ''
 
   renderAspects(data.aspects || [])
-  renderList('highlights-list', 'highlights-section', data.highlights, 'highlights')
-  renderList('warnings-list', 'warnings-section', data.warnings, 'warnings')
+  renderList('highlights-list', 'highlights-section', data.highlights)
+  renderList('warnings-list', 'warnings-section', data.warnings)
 
-  // Pro 기능
   const proSection = el('pro-section')
   const proGate = el('pro-gate')
 
@@ -169,7 +218,6 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
     proGate.style.display = 'block'
   }
 
-  // 언어 비율
   const langSection = el('lang-section')
   const langInfo = el('lang-info')
   const breakdown = data.languageBreakdown
@@ -199,7 +247,6 @@ async function init() {
   const premiumData = await chrome.storage.local.get(STORAGE_KEYS.PREMIUM)
   const isPro = premiumData[STORAGE_KEYS.PREMIUM] === true
 
-  // storage에서 최신 결과 읽기
   const stored = await chrome.storage.local.get(STORAGE_KEYS.LAST_ANALYSIS)
   const analysis = stored[STORAGE_KEYS.LAST_ANALYSIS]
 
@@ -214,7 +261,6 @@ async function init() {
     renderAnalysis(analysis.data, analysis.placeInfo, isPro)
   }
 
-  // 실시간 메시지 수신
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'ANALYSIS_RESULT' && msg.data) {
       if (msg.data.success && msg.data.data) {
