@@ -1,7 +1,8 @@
 import type { Env } from '../index'
 
 /**
- * Vercel /api/status 호출로 Pro 여부 확인. 인메모리 5분 캐시.
+ * Vercel /api/status 호출로 Pro 여부 확인. 인메모리 1분 캐시.
+ * 결제 직후 Pro 반영 지연을 최소화하기 위해 5분 → 1분으로 축소.
  */
 const cache = new Map<string, { isPro: boolean; expiresAt: number }>()
 
@@ -24,7 +25,7 @@ export async function checkPremium(installId: string, env: Env): Promise<boolean
     if (!res.ok) return false
 
     const { premium } = (await res.json()) as { premium: boolean }
-    cache.set(installId, { isPro: premium, expiresAt: Date.now() + 5 * 60 * 1000 })
+    cache.set(installId, { isPro: premium, expiresAt: Date.now() + 60 * 1000 })
     return premium
   } catch {
     return false
