@@ -1,5 +1,20 @@
 import { API_BASE, WORKERS_BASE, STORAGE_KEYS, FREE_DAILY_LIMIT } from './js/config.js'
 
+// installId가 없으면 재생성 (storage 초기화 대응)
+async function ensureInstallId() {
+  const data = await chrome.storage.local.get(STORAGE_KEYS.INSTALL_ID)
+  if (data[STORAGE_KEYS.INSTALL_ID]) return data[STORAGE_KEYS.INSTALL_ID]
+  const newId = crypto.randomUUID()
+  await chrome.storage.local.set({
+    [STORAGE_KEYS.INSTALL_ID]: newId,
+    [STORAGE_KEYS.PREMIUM]: false,
+    [STORAGE_KEYS.PLAN_TYPE]: null,
+    [STORAGE_KEYS.EXPIRES_AT]: null,
+    [STORAGE_KEYS.SUB_STATUS]: null
+  })
+  return newId
+}
+
 const DEFAULT_USAGE = {
   count: 0,
   limit: FREE_DAILY_LIMIT,
@@ -9,16 +24,7 @@ const DEFAULT_USAGE = {
 
 // === onInstalled ===
 chrome.runtime.onInstalled.addListener(async () => {
-  const data = await chrome.storage.local.get(STORAGE_KEYS.INSTALL_ID)
-  if (!data[STORAGE_KEYS.INSTALL_ID]) {
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.INSTALL_ID]: crypto.randomUUID(),
-      [STORAGE_KEYS.PREMIUM]: false,
-      [STORAGE_KEYS.PLAN_TYPE]: null,
-      [STORAGE_KEYS.EXPIRES_AT]: null,
-      [STORAGE_KEYS.SUB_STATUS]: null
-    })
-  }
+  await ensureInstallId()
   chrome.alarms.create('check-premium', { periodInMinutes: 30 })
   await checkSubscriptionStatus()
 })
@@ -75,9 +81,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // === 구독 상태 체크 ===
 async function checkSubscriptionStatus() {
   try {
-    const data = await chrome.storage.local.get(STORAGE_KEYS.INSTALL_ID)
-    const installId = data[STORAGE_KEYS.INSTALL_ID]
-    if (!installId) return
+    const installId = await ensureInstallId()
 
     const res = await fetch(`${API_BASE}/api/status?id=${installId}`)
     if (!res.ok) throw new Error('API error')
@@ -98,8 +102,7 @@ async function checkSubscriptionStatus() {
 // === 분석 핸들러 ===
 async function handleAnalyze(request, sendResponse) {
   try {
-    const data = await chrome.storage.local.get(STORAGE_KEYS.INSTALL_ID)
-    const installId = data[STORAGE_KEYS.INSTALL_ID] || ''
+    const installId = await ensureInstallId()
 
     const res = await fetch(`${WORKERS_BASE}/analyze`, {
       method: 'POST',
@@ -135,13 +138,7 @@ async function handleAnalyze(request, sendResponse) {
 // === 사용량 핸들러 ===
 async function handleGetUsage(sendResponse) {
   try {
-    const data = await chrome.storage.local.get(STORAGE_KEYS.INSTALL_ID)
-    const installId = data[STORAGE_KEYS.INSTALL_ID] || ''
-
-    if (!installId) {
-      sendResponse({ success: true, data: DEFAULT_USAGE })
-      return
-    }
+    const installId = await ensureInstallId()
 
     const res = await fetch(`${WORKERS_BASE}/usage`, { headers: { 'X-Device-ID': installId } })
 
