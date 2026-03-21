@@ -6,10 +6,9 @@ compatibility_date = "2024-12-01"
 CLAUDE_MODEL = "claude-haiku-4-5-20251001"
 PROMPT_VERSION = "v1"
 FREE_DAILY_LIMIT = "5"
-CHECKOUT_ORIGIN = "" # GitHub Pages 도메인 (배포 후 설정, e.g. https://username.github.io)
+PADDLE_BACKEND_URL = "https://paddle-extensions-backend.vercel.app"
 
 # Secrets (set via `wrangler secret put`):
 # ANTHROPIC_API_KEY
 # SUPABASE_URL
 # SUPABASE_SERVICE_ROLE_KEY
-# CHECKOUT_TOKEN_SECRET

@@ -8,6 +8,7 @@ import {
   ValidationError
 } from '../lib/validate'
 import { extractIdentity, AuthError } from '../lib/auth'
+import { checkPremium } from '../lib/premium'
 
 const MAX_REVIEWS = 50
 const MAX_REVIEW_LENGTH = 500
@@ -110,7 +111,7 @@ export async function handleAnalyze(
 ): Promise<Response> {
   try {
     // 1. 인증: JWT → user_id 또는 X-Device-ID → device_id
-    const identity = await extractIdentity(request, env)
+    const identity = extractIdentity(request)
 
     // 2. 요청 크기 검증
     validateRequestSize(request.headers.get('Content-Length'), MAX_BODY_BYTES)
@@ -136,25 +137,15 @@ export async function handleAnalyze(
 
     // 4. 사용량 원자적 카운트 증가 (Race condition 방지)
     const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
-    const usageParams =
-      identity.type === 'user'
-        ? { p_user_id: identity.userId, p_limit: limit }
-        : { p_device_id: identity.deviceId, p_limit: limit }
+    const usageParams = { p_device_id: identity.deviceId, p_limit: limit }
     const usageResult = (await supabaseRpc(env, 'increment_usage', usageParams)) as Array<{
       new_count: number
       exceeded: boolean
     }>
 
-    // Pro 체크 (서버에서 DB 조회 — 클라이언트 isPro 캐시를 신뢰하지 않음)
-    let isPro = false
-    if (identity.type === 'user') {
-      const subs = (await supabaseQuery(
-        env,
-        `subscriptions?user_id=eq.${encodeURIComponent(identity.userId!)}&status=eq.active&select=id`,
-        { headers: { Accept: 'application/json' } }
-      )) as Array<{ id: string }>
-      isPro = subs.length > 0
-    }
+    // Pro 체크 — Vercel /api/status 호출 (5분 캐시)
+    const installId = identity.deviceId
+    const isPro = await checkPremium(installId, env)
 
     if (!isPro && usageResult[0]?.exceeded) {
       return jsonResponse(
@@ -177,10 +168,7 @@ export async function handleAnalyze(
     } catch (err) {
       // Claude API 실패 → 카운트 롤백
       try {
-        const rollbackParams =
-          identity.type === 'user'
-            ? { p_user_id: identity.userId }
-            : { p_device_id: identity.deviceId }
+        const rollbackParams = { p_device_id: identity.deviceId }
         await supabaseRpc(env, 'decrement_usage', rollbackParams)
       } catch {
         console.error('[Rollback failed]', err)
@@ -215,9 +203,7 @@ export async function handleAnalyze(
       await supabaseQuery(env, 'analysis_history', {
         method: 'POST',
         body: {
-          ...(identity.type === 'user'
-            ? { user_id: identity.userId }
-            : { device_id: identity.deviceId }),
+          device_id: identity.deviceId,
           place_id: body.placeInfo?.placeId ?? '',
           place_name: body.placeInfo?.name ?? '',
           place_url: body.placeInfo?.url ?? '',

@@ -1,6 +1,7 @@
 import type { Env } from '../index'
 import { supabaseQuery } from '../lib/supabase'
 import { extractIdentity } from '../lib/auth'
+import { checkPremium } from '../lib/premium'
 
 export async function handleUsage(
   request: Request,
@@ -9,15 +10,11 @@ export async function handleUsage(
   errorResponse: (message: string, status: number) => Response
 ): Promise<Response> {
   try {
-    const identity = await extractIdentity(request, env)
+    const identity = extractIdentity(request)
     const limit = parseInt(env.FREE_DAILY_LIMIT, 10)
     const today = new Date().toISOString().split('T')[0]
 
-    // identity에 따라 쿼리 분기
-    const filter =
-      identity.type === 'user'
-        ? `user_id=eq.${encodeURIComponent(identity.userId!)}`
-        : `device_id=eq.${encodeURIComponent(identity.deviceId!)}`
+    const filter = `device_id=eq.${encodeURIComponent(identity.deviceId)}`
 
     const result = (await supabaseQuery(env, `usage?${filter}&date_key=eq.${today}&select=count`, {
       headers: { Accept: 'application/json' }
@@ -25,16 +22,9 @@ export async function handleUsage(
 
     const count = result?.[0]?.count ?? 0
 
-    // Pro 체크 (인증된 사용자만)
-    let isPro = false
-    if (identity.type === 'user') {
-      const subs = (await supabaseQuery(
-        env,
-        `subscriptions?user_id=eq.${encodeURIComponent(identity.userId!)}&status=eq.active&select=id`,
-        { headers: { Accept: 'application/json' } }
-      )) as Array<{ id: string }>
-      isPro = subs.length > 0
-    }
+    // Pro 체크 — Vercel /api/status (5분 캐시)
+    const installId = identity.deviceId
+    const isPro = await checkPremium(installId, env)
 
     return jsonResponse({
       success: true,
