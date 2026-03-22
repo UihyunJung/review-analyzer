@@ -222,18 +222,12 @@ function expandAllReviews(doc: Document): void {
 }
 
 // --- 무한 스크롤 로딩 ---
-async function scrollAndLoadReviews(panel: Element, maxReviews: number): Promise<void> {
-  // 리뷰 아이템의 스크롤 가능한 부모를 찾아서 스크롤 대상으로 사용
-  const firstReview = panel.querySelector(SELECTORS.REVIEW_ITEM)
-  const scrollTarget = firstReview ? findScrollableParent(firstReview) : panel
-
-  if (!scrollTarget) return
-
+async function scrollAndLoadReviews(scrollTarget: Element, maxReviews: number): Promise<void> {
   let prevCount = 0
   let staleRounds = 0
 
   while (staleRounds < 5) {
-    const currentCount = panel.querySelectorAll(SELECTORS.REVIEW_ITEM).length
+    const currentCount = document.querySelectorAll(SELECTORS.REVIEW_ITEM).length
     if (currentCount >= maxReviews) break
 
     if (currentCount === prevCount) {
@@ -256,21 +250,33 @@ export async function extractGoogleMapsReviews(
 ): Promise<{ reviews: Review[]; placeInfo: PlaceInfo }> {
   const placeInfo = extractPlaceInfo(doc, url)
 
-  // 리뷰 패널 열기
+  // 리뷰 탭 열기
   const panel = await openReviewPanel(doc)
   if (!panel) {
     return { reviews: [], placeInfo }
   }
 
-  // 무한 스크롤로 리뷰 로딩
-  await scrollAndLoadReviews(panel, maxReviews)
+  // 리뷰 탭 전환 후 DOM 안정화 대기
+  await new Promise((r) => setTimeout(r, 500))
+
+  // 스크롤 컨테이너 재탐색 (리뷰 탭 전환 후 DOM이 변경되므로)
+  const scrollContainer =
+    doc.querySelector(SELECTORS.REVIEW_PANEL_SCROLLABLE) ||
+    (() => {
+      const firstReview = doc.querySelector(SELECTORS.REVIEW_ITEM)
+      return firstReview ? findScrollableParent(firstReview) : null
+    })()
+
+  if (scrollContainer) {
+    await scrollAndLoadReviews(scrollContainer, maxReviews)
+  }
 
   // "More" 버튼 클릭해서 전체 텍스트 펼치기
   expandAllReviews(doc)
   await new Promise((r) => setTimeout(r, 300))
 
-  // 리뷰 파싱
-  const reviewElements = panel.querySelectorAll(SELECTORS.REVIEW_ITEM)
+  // 리뷰 파싱 (document 전체에서 검색 — stale 참조 방지)
+  const reviewElements = doc.querySelectorAll(SELECTORS.REVIEW_ITEM)
   const seen = new Set<string>()
   const reviews: Review[] = []
 
