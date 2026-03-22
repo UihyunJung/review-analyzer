@@ -8,11 +8,11 @@ const SELECTORS = {
   // fallback: 기존 방식
   ALL_REVIEWS_BUTTON: 'button[jsaction*="reviewChart"]',
 
-  // 리뷰 컨테이너 (난독화 클래스 — findScrollableParent로 fallback)
+  // 리뷰 컨테이너 (스크롤 영역)
   REVIEW_PANEL_SCROLLABLE: 'div.m6QErb.DxyBCb',
 
-  // 개별 리뷰 (data-review-id — 안정적)
-  REVIEW_ITEM: 'div[data-review-id]',
+  // 개별 리뷰 (중첩된 data-review-id 중 최상위만 — :not으로 필터)
+  REVIEW_ITEM: 'div[data-review-id]:not(div[data-review-id] div[data-review-id])',
   // 리뷰 내부 요소 (난독화 클래스 + aria-label fallback)
   REVIEW_TEXT: 'span.wiI7pd',
   REVIEW_MORE_BUTTON: 'button.w8nwRe.kyuRq',
@@ -133,7 +133,12 @@ function parseReviewElement(el: Element, index: number): Review | null {
 
 // --- 장소 메타데이터 추출 ---
 export function extractPlaceInfo(doc: Document, url: string): PlaceInfo {
-  const name = doc.querySelector(SELECTORS.PLACE_NAME)?.textContent?.trim() ?? 'Unknown Place'
+  let name = doc.querySelector(SELECTORS.PLACE_NAME)?.textContent?.trim() ?? ''
+  if (!name) {
+    // fallback: 리뷰 탭 aria-label 전체 사용 (리뷰 탭에서 새로고침 시 h1 없음)
+    const reviewTab = doc.querySelector(SELECTORS.REVIEW_TAB)
+    name = reviewTab?.getAttribute('aria-label')?.trim() || 'Unknown Place'
+  }
   const category = doc.querySelector(SELECTORS.PLACE_CATEGORY)?.textContent?.trim() ?? ''
   const ratingText = doc.querySelector(SELECTORS.PLACE_RATING)?.textContent?.trim() ?? '0'
   const overallRating = parseFloat(ratingText) || 0
@@ -156,63 +161,6 @@ export function extractPlaceInfo(doc: Document, url: string): PlaceInfo {
   }
 }
 
-// --- 스크롤 가능한 부모 요소 찾기 (난독화 클래스 의존 제거) ---
-function findScrollableParent(element: Element): Element | null {
-  let el: Element | null = element
-  while (el) {
-    const style = getComputedStyle(el)
-    if (
-      (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
-      el.scrollHeight > el.clientHeight
-    ) {
-      return el
-    }
-    el = el.parentElement
-  }
-  return null
-}
-
-// --- 리뷰 패널 열기 ---
-async function openReviewPanel(doc: Document): Promise<Element | null> {
-  // 리뷰 탭 클릭 (aria-label 기반 우선, fallback: 기존 방식)
-  const reviewTab = doc.querySelector(SELECTORS.REVIEW_TAB)
-  const reviewBtn = reviewTab || doc.querySelector(SELECTORS.ALL_REVIEWS_BUTTON)
-
-  if (reviewBtn && reviewBtn instanceof HTMLElement) {
-    reviewBtn.click()
-  }
-
-  // 리뷰가 나타날 때까지 대기 (난독화 클래스 의존 제거)
-  return new Promise((resolve) => {
-    let attempts = 0
-    const check = () => {
-      // 먼저 리뷰 아이템이 있는지 확인 (data-review-id는 안정적)
-      const firstReview = doc.querySelector(SELECTORS.REVIEW_ITEM)
-      if (firstReview) {
-        // 리뷰의 스크롤 가능한 부모 컨테이너를 찾음
-        const scrollable = findScrollableParent(firstReview)
-        if (scrollable) {
-          resolve(scrollable)
-          return
-        }
-      }
-      // fallback: 기존 셀렉터 시도
-      const panel = doc.querySelector(SELECTORS.REVIEW_PANEL_SCROLLABLE)
-      if (panel) {
-        resolve(panel)
-        return
-      }
-      attempts++
-      if (attempts > 20) {
-        resolve(null)
-        return
-      }
-      setTimeout(check, 300)
-    }
-    check()
-  })
-}
-
 // --- 리뷰 "More" 버튼 클릭 (전체 텍스트 펼치기) ---
 function expandAllReviews(doc: Document): void {
   const moreButtons = doc.querySelectorAll(SELECTORS.REVIEW_MORE_BUTTON)
@@ -221,25 +169,46 @@ function expandAllReviews(doc: Document): void {
   })
 }
 
-// --- 무한 스크롤 로딩 ---
-async function scrollAndLoadReviews(scrollTarget: Element, maxReviews: number): Promise<void> {
-  let prevCount = 0
+// --- 대기 헬퍼 ---
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// --- 리뷰 탭 클릭 → 스크롤 → 50개 수집 ---
+// 스크롤 컨테이너를 반환 (파싱 시 이 안에서만 검색)
+async function loadReviews(doc: Document, maxReviews: number): Promise<Element | null> {
+  // 1. 리뷰 탭 클릭
+  const reviewTab = doc.querySelector(SELECTORS.REVIEW_TAB) || doc.querySelector(SELECTORS.ALL_REVIEWS_BUTTON)
+  if (reviewTab && reviewTab instanceof HTMLElement) {
+    reviewTab.click()
+  }
+
+  // 2. 스크롤 컨테이너가 나타날 때까지 대기 (최대 10초)
+  let scrollContainer: Element | null = null
+  for (let i = 0; i < 20; i++) {
+    await wait(500)
+    scrollContainer = doc.querySelector(SELECTORS.REVIEW_PANEL_SCROLLABLE)
+    if (scrollContainer && scrollContainer.querySelectorAll(SELECTORS.REVIEW_ITEM).length >= 1) break
+  }
+
+  if (!scrollContainer) return null
+
+  // 3. 스크롤하면서 리뷰 로드 — 컨테이너 안에서만 카운트
   let staleRounds = 0
+  while (staleRounds < 3) {
+    const count = scrollContainer.querySelectorAll(SELECTORS.REVIEW_ITEM).length
+    if (count >= maxReviews) break
 
-  while (staleRounds < 5) {
-    const currentCount = document.querySelectorAll(SELECTORS.REVIEW_ITEM).length
-    if (currentCount >= maxReviews) break
+    scrollContainer.scrollTop = scrollContainer.scrollHeight
+    await wait(1000)
 
-    if (currentCount === prevCount) {
+    const newCount = scrollContainer.querySelectorAll(SELECTORS.REVIEW_ITEM).length
+    if (newCount === count) {
       staleRounds++
     } else {
       staleRounds = 0
     }
-    prevCount = currentCount
-
-    scrollTarget.scrollTop = scrollTarget.scrollHeight
-    await new Promise((r) => setTimeout(r, 800))
   }
+
+  return scrollContainer
 }
 
 // --- 메인 추출 함수 ---
@@ -248,44 +217,29 @@ export async function extractGoogleMapsReviews(
   url: string,
   maxReviews: number = MAX_REVIEWS
 ): Promise<{ reviews: Review[]; placeInfo: PlaceInfo }> {
+  // 장소 메타데이터 (리뷰 탭 전환 전에 추출 — 리뷰 탭에서는 h1이 사라짐)
   const placeInfo = extractPlaceInfo(doc, url)
 
-  // 리뷰 탭 열기
-  const panel = await openReviewPanel(doc)
-  if (!panel) {
+  // 리뷰 탭 클릭 → 스크롤 → 리뷰 로드
+  const reviewContainer = await loadReviews(doc, maxReviews)
+  if (!reviewContainer) {
     return { reviews: [], placeInfo }
-  }
-
-  // 리뷰 탭 전환 후 DOM 안정화 대기
-  await new Promise((r) => setTimeout(r, 500))
-
-  // 스크롤 컨테이너 재탐색 (리뷰 탭 전환 후 DOM이 변경되므로)
-  const scrollContainer =
-    doc.querySelector(SELECTORS.REVIEW_PANEL_SCROLLABLE) ||
-    (() => {
-      const firstReview = doc.querySelector(SELECTORS.REVIEW_ITEM)
-      return firstReview ? findScrollableParent(firstReview) : null
-    })()
-
-  if (scrollContainer) {
-    await scrollAndLoadReviews(scrollContainer, maxReviews)
   }
 
   // "More" 버튼 클릭해서 전체 텍스트 펼치기
   expandAllReviews(doc)
-  await new Promise((r) => setTimeout(r, 300))
+  await wait(300)
 
-  // 리뷰 파싱 (document 전체에서 검색 — stale 참조 방지)
-  const reviewElements = doc.querySelectorAll(SELECTORS.REVIEW_ITEM)
+  // 리뷰 파싱 (스크롤 컨테이너 안에서만)
+  const reviewElements = reviewContainer.querySelectorAll(SELECTORS.REVIEW_ITEM)
   const seen = new Set<string>()
   const reviews: Review[] = []
-
   for (let i = 0; i < reviewElements.length && reviews.length < maxReviews; i++) {
     const review = parseReviewElement(reviewElements[i], i)
     if (!review) continue
 
-    // 중복 제거 (텍스트 기준)
-    const key = review.text.slice(0, 100)
+    // 중복 제거 (review ID 기준)
+    const key = reviewElements[i].getAttribute('data-review-id') || review.text.slice(0, 100)
     if (seen.has(key)) continue
     seen.add(key)
 

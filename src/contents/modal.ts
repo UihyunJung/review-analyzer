@@ -1,5 +1,9 @@
 import { t } from '../js/i18n.js'
-// @ts-ignore — Vite raw import
+
+declare module '*.css?inline' {
+  const css: string
+  export default css
+}
 import modalCss from '../css/modal.css?inline'
 
 // --- Shadow DOM 기반 모달 ---
@@ -420,7 +424,12 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
       t('reviews') + ': ' +
       Object.entries(breakdown)
         .sort(([, a]: any, [, b]: any) => b - a)
-        .map(([lang, count]: any) => `${Math.round((count / total) * 100)}% ${lang.toUpperCase()}`)
+        .map(([lang, count]: any) => {
+          const langKey = 'lang_' + lang.toLowerCase()
+          const translated = t(langKey)
+          const label = translated !== langKey ? translated : lang.toUpperCase()
+          return `${Math.round((count / total) * 100)}% ${label}`
+        })
         .join(', ')
   } else {
     langSection.style.display = 'none'
