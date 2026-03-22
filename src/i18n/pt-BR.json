@@ -33,6 +33,7 @@
   "expires": "expira",
   "canceledNotice": "Cancelado. Pro termina em {date}.",
   "autoRenewNotice": "Renovação automática. Para cancelar, verifique o e-mail de recibo do Paddle.",
+  "togglePanel": "Mostrar/ocultar análise",
   "analyzeButton": "Analisar este lugar",
   "analyzingButton": "Analisando...",
   "doneButton": "Concluído",
@@ -63,5 +64,5 @@
   "howToUseTitle": "Como usar",
   "howToStep1": "Abra uma página de lugar no Google Maps",
   "howToStep2": "Clique no botão \"★ Analisar este lugar\" no canto inferior direito",
-  "howToStep3": "Veja os resultados da análise IA no painel lateral"
+  "howToStep3": "Veja os resultados da análise IA na janela modal"
 }

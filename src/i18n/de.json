@@ -33,6 +33,7 @@
   "expires": "läuft ab",
   "canceledNotice": "Gekündigt. Pro endet am {date}.",
   "autoRenewNotice": "Verlängert sich automatisch. Zum Kündigen prüfen Sie die Bestätigungs-E-Mail von Paddle.",
+  "togglePanel": "Analyse ein-/ausblenden",
   "analyzeButton": "Diesen Ort analysieren",
   "analyzingButton": "Wird analysiert...",
   "doneButton": "Fertig",
@@ -63,5 +64,5 @@
   "howToUseTitle": "So funktioniert's",
   "howToStep1": "Öffnen Sie eine Ortsseite auf Google Maps",
   "howToStep2": "Klicken Sie unten rechts auf \"★ Diesen Ort analysieren\"",
-  "howToStep3": "Sehen Sie die KI-Analyseergebnisse im Seitenpanel"
+  "howToStep3": "KI-Analyseergebnisse im Popup-Modal ansehen"
 }

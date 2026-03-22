@@ -33,6 +33,7 @@
   "expires": "期限",
   "canceledNotice": "キャンセル済み。{date}にProが終了します。",
   "autoRenewNotice": "自動更新されます。キャンセルするにはPaddleからの領収メールをご確認ください。",
+  "togglePanel": "分析パネルの表示/非表示",
   "analyzeButton": "この場所を分析",
   "analyzingButton": "分析中...",
   "doneButton": "完了",
@@ -63,5 +64,5 @@
   "howToUseTitle": "使い方",
   "howToStep1": "Google Mapsで場所のページを開きます",
   "howToStep2": "右下の「★ この場所を分析」ボタンをクリックします",
-  "howToStep3": "サイドパネルでAI分析結果を確認します"
+  "howToStep3": "ポップアップモーダルでAI分析結果を確認します"
 }

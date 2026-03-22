@@ -1,4 +1,5 @@
 import { API_BASE, WORKERS_BASE, STORAGE_KEYS, FREE_DAILY_LIMIT } from './js/config.js'
+import { openCheckout } from './js/subscription.js'
 
 // installId가 없으면 재생성 (storage 초기화 대응)
 async function ensureInstallId() {
@@ -70,12 +71,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true
   }
 
-  if (msg.type === 'OPEN_SIDE_PANEL') {
-    if (sender.tab?.id) {
-      chrome.sidePanel.open({ tabId: sender.tab.id }).catch((err) => {
-        console.error('[SidePanel open failed]', err)
-      })
-    }
+  if (msg.type === 'OPEN_CHECKOUT') {
+    openCheckout(msg.plan || 'monthly').catch((err) => {
+      console.error('[OPEN_CHECKOUT failed]', err)
+    })
     return false
   }
 })
@@ -111,10 +110,6 @@ async function checkSubscriptionStatus(force = false) {
 // === 분석 핸들러 ===
 async function handleAnalyze(request, sendResponse) {
   try {
-    // 이전 결과 초기화 + SidePanel에 로딩 상태 전송
-    await chrome.storage.local.remove(STORAGE_KEYS.LAST_ANALYSIS)
-    chrome.runtime.sendMessage({ type: 'ANALYSIS_LOADING' }).catch(() => {})
-
     const installId = await ensureInstallId()
 
     const res = await fetch(`${WORKERS_BASE}/analyze`, {
@@ -137,11 +132,9 @@ async function handleAnalyze(request, sendResponse) {
           exceeded: result.exceeded || false
         }
 
+    // storage에 저장 (페이지 새로고침 후 참조용)
     const storedResult = { ...response, placeInfo: request.placeInfo, timestamp: Date.now() }
     await chrome.storage.local.set({ [STORAGE_KEYS.LAST_ANALYSIS]: storedResult })
-
-    // SidePanel에 실시간 메시지 전송 (열려있으면 즉시 반영)
-    chrome.runtime.sendMessage({ type: 'ANALYSIS_RESULT', data: storedResult }).catch(() => {})
 
     sendResponse(response)
   } catch (error) {

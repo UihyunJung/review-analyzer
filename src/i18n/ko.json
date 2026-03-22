@@ -33,6 +33,7 @@
   "expires": "만료",
   "canceledNotice": "취소됨. {date}에 Pro가 종료됩니다.",
   "autoRenewNotice": "자동 갱신됩니다. 취소하려면 Paddle에서 받은 영수증 이메일을 확인하세요.",
+  "togglePanel": "분석 패널 열기/닫기",
   "analyzeButton": "리뷰 분석하기",
   "analyzingButton": "분석 중...",
   "doneButton": "완료",
@@ -63,5 +64,5 @@
   "howToUseTitle": "사용 방법",
   "howToStep1": "Google Maps에서 장소 페이지를 엽니다",
   "howToStep2": "오른쪽 하단의 \"★ 리뷰 분석하기\" 버튼을 클릭합니다",
-  "howToStep3": "사이드 패널에서 AI 분석 결과를 확인합니다"
+  "howToStep3": "팝업 모달에서 AI 분석 결과를 확인합니다"
 }

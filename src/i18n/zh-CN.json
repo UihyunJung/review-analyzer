@@ -33,6 +33,7 @@
   "expires": "到期",
   "canceledNotice": "已取消。Pro版将于{date}到期。",
   "autoRenewNotice": "自动续费。如需取消，请查看Paddle发送的收据邮件。",
+  "togglePanel": "显示/隐藏分析",
   "analyzeButton": "分析此场所",
   "analyzingButton": "分析中...",
   "doneButton": "完成",
@@ -63,5 +64,5 @@
   "howToUseTitle": "使用方法",
   "howToStep1": "在Google Maps上打开一个场所页面",
   "howToStep2": "点击右下角的「★ 分析此场所」按钮",
-  "howToStep3": "在侧边栏查看AI分析结果"
+  "howToStep3": "在弹窗中查看AI分析结果"
 }
