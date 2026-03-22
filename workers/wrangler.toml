@@ -2,12 +2,23 @@ name = "place-review-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 
+# Production (default: `wrangler deploy`)
 [vars]
 GEMINI_MODEL = "gemini-2.5-flash"
 PROMPT_VERSION = "v1"
 FREE_DAILY_LIMIT = "5"
 PRO_DAILY_LIMIT = "100"
 PADDLE_BACKEND_URL = "https://paddle-extensions-backend.vercel.app"
+
+# Development (`wrangler deploy --env dev`)
+[env.dev]
+name = "place-review-api-dev"
+[env.dev.vars]
+GEMINI_MODEL = "gemini-2.5-flash"
+PROMPT_VERSION = "v1"
+FREE_DAILY_LIMIT = "5"
+PRO_DAILY_LIMIT = "100"
+PADDLE_BACKEND_URL = "https://paddle-extensions-backend-git-sandbox-euihyun-jungs-projects.vercel.app"
 
 # Secrets (set via `wrangler secret put`):
 # GEMINI_API_KEY

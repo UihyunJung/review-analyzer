@@ -57,7 +57,8 @@ function updateUsageUI(usage: { count: number; limit: number; remaining: number 
   const upsellEl = el('usage-upsell')
 
   const exceeded = usage.remaining <= 0 && !isPremium
-  countEl.textContent = `${usage.count} / ${usage.limit}`
+  const displayCount = Math.min(usage.count, usage.limit)
+  countEl.textContent = `${displayCount} / ${usage.limit}`
   countEl.style.color = ''
   fillEl.style.width = `${Math.min((usage.count / usage.limit) * 100, 100)}%`
   fillEl.className = exceeded ? 'usage-fill exceeded' : 'usage-fill'

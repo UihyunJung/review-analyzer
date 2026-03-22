@@ -10,8 +10,6 @@
   "permissions": ["storage", "alarms"],
   "host_permissions": [
     "https://www.google.com/maps/*",
-    "https://m.place.naver.com/*",
-    "https://pcmap.place.naver.com/*",
     "https://place-review-api.uihyun-jung.workers.dev/*",
     "https://paddle-extensions-backend.vercel.app/*"
   ],
@@ -23,10 +21,6 @@
     {
       "matches": ["https://www.google.com/maps/*"],
       "js": ["content-google-maps.js"]
-    },
-    {
-      "matches": ["https://m.place.naver.com/*", "https://pcmap.place.naver.com/*"],
-      "js": ["content-naver-place.js"]
     }
   ],
   "icons": {

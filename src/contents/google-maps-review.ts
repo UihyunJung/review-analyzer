@@ -1,7 +1,7 @@
 import { extractGoogleMapsReviews } from '../lib/scrapers/google-maps'
 import { getDefaultLanguage, setLanguage, t } from '../js/i18n.js'
 import { STORAGE_KEYS } from '../js/config.js'
-import { showLoading, showResult, showError, hideModal, hasResult, toggleModal, clearResult } from './modal'
+import { showLoading, setLoadingStage, showResult, showError, showExceeded, hideModal, hasResult, toggleModal, clearResult } from './modal'
 
 // 저장된 언어 복원 (비동기)
 let currentLang = getDefaultLanguage()
@@ -68,9 +68,27 @@ function createToggleButton(): HTMLButtonElement {
 }
 
 let loading = false
+let exceeded = false
 
 async function handleAnalyzeClick(btn: HTMLButtonElement) {
   if (loading) return
+  if (exceeded) {
+    showExceeded()
+    return
+  }
+
+  // 분석 전 사용량 확인
+  const usageCheck = await new Promise<{ success?: boolean; data?: { remaining: number } }>((resolve) => {
+    chrome.runtime.sendMessage({ type: 'GET_USAGE' }, resolve)
+  })
+  if (usageCheck?.success && usageCheck.data?.remaining <= 0) {
+    exceeded = true
+    btn.textContent = t('upgradeButton')
+    btn.style.background = '#ff9800'
+    showExceeded()
+    return
+  }
+
   loading = true
   btn.textContent = t('analyzingButton')
   btn.style.opacity = '0.8'
@@ -89,6 +107,8 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
       return
     }
 
+    setLoadingStage('analyzing')
+
     chrome.runtime.sendMessage(
       { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'google_maps', lang: currentLang },
       (response) => {
@@ -101,9 +121,10 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
           toggleBtn.style.display = ''
           setTimeout(() => resetButton(btn), 3000)
         } else if (response?.exceeded) {
+          exceeded = true
           btn.textContent = t('upgradeButton')
           btn.style.background = '#ff9800'
-          showError(t('limitReached'))
+          showExceeded()
         } else {
           btn.textContent = t('analysisFailed')
           btn.style.background = '#e53935'
@@ -168,10 +189,12 @@ function updateButtonVisibility() {
 updateButtonVisibility()
 
 let lastUrl = location.href
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const observer = new MutationObserver(() => {
   if (location.href !== lastUrl) {
     lastUrl = location.href
-    updateButtonVisibility()
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(updateButtonVisibility, 100)
   }
 })
 observer.observe(document.body, { childList: true, subtree: true })

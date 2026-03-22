@@ -136,6 +136,15 @@ async function handleAnalyze(request, sendResponse) {
     const storedResult = { ...response, placeInfo: request.placeInfo, timestamp: Date.now() }
     await chrome.storage.local.set({ [STORAGE_KEYS.LAST_ANALYSIS]: storedResult })
 
+    // 분석 후 사용량 캐시 갱신 (popup에서 즉시 반영)
+    try {
+      const usageRes = await fetch(`${WORKERS_BASE}/usage`, { headers: { 'X-Device-ID': installId } })
+      if (usageRes.ok) {
+        const usageData = await usageRes.json()
+        await chrome.storage.local.set({ [STORAGE_KEYS.USAGE_CACHE]: usageData.data })
+      }
+    } catch { /* 사용량 갱신 실패해도 무시 */ }
+
     sendResponse(response)
   } catch (error) {
     sendResponse({ success: false, error: error.message || 'Unknown error' })

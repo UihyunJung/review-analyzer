@@ -44,7 +44,7 @@ const LANG_NAMES: Record<string, string> = {
 function buildSystemPrompt(category: string, site: string, lang: string): string {
   const langName = LANG_NAMES[lang] || 'English'
 
-  return `You are a review analyst for ${site === 'naver_place' ? 'Naver Place' : 'Google Maps'} places. Analyze the provided reviews for a ${category || 'place'}.
+  return `You are a review analyst for Google Maps places. Analyze the provided reviews for a ${category || 'place'}.
 Reviews may be in multiple languages — analyze all regardless of language.
 
 CRITICAL RULES:
@@ -158,7 +158,7 @@ export async function handleAnalyze(
           cachedModel = match.model
         }
       } catch {
-        // 캐시 조회 실패 시 무시 → API 호출로 진행
+        // cache query failed — proceed without cache
       }
     }
 

@@ -7,7 +7,8 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --config vite.cs-gmaps.config.js && vite build --config vite.cs-naver.config.js",
+    "build": "vite build && vite build --config vite.cs-gmaps.config.js",
+    "build:dev": "vite build --mode development && vite build --config vite.cs-gmaps.config.js --mode development",
     "lint": "eslint src/",
     "format:check": "prettier --check 'src/**/*.{ts,js}'",
     "format": "prettier --write 'src/**/*.{ts,js}'",

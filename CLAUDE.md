@@ -6,6 +6,7 @@ Google Maps/네이버 Place 식당·장소 리뷰를 AI로 측면별(Food, Servi
 
 ```bash
 pnpm build          # Vite 빌드 (dist/) — main + content scripts 3단계
+pnpm build:dev      # 개발용 빌드 (.env.development)
 pnpm dev            # Vite 개발 서버
 pnpm lint           # ESLint
 pnpm format:check   # Prettier 체크
@@ -15,16 +16,19 @@ pnpm test           # vitest
 Workers (Cloudflare):
 ```bash
 cd workers
-npx wrangler deploy --config wrangler.toml
+npx wrangler deploy --config wrangler.toml              # 프로덕션
+npx wrangler deploy --config wrangler.toml --env dev    # 개발
 ```
 
 ## 아키텍처
 
 - **확장**: Vite + 바닐라 JS/TS (React 없음, average-down-extension 패턴)
-- **백엔드 (분석)**: Cloudflare Workers — Claude API 프록시 + 사용량
+- **UI**: Content Script Shadow DOM 모달 (SidePanel 아님)
+- **백엔드 (분석)**: Cloudflare Workers — Gemini 2.5 Flash API 프록시 + 사용량 + 24h 캐시
 - **백엔드 (결제)**: paddle-extensions-backend (Vercel) — 공유
 - **DB**: Supabase Free (usage, analysis_history)
-- **i18n**: en, ko, ja, zh-CN, zh-TW (src/i18n/*.json + _locales/)
+- **i18n**: en, ko, ja, zh-CN, zh-TW, de, es, fr, pt-BR, it (src/i18n/*.json + _locales/)
+- **환경 분리**: `.env.development` / `.env.production` (Vite), `wrangler.toml [env.dev]` (Workers)
 
 ## 핵심 규칙
 
@@ -35,12 +39,12 @@ npx wrangler deploy --config wrangler.toml
 
 ## 파일 구조
 
-- `popup.html` + `src/js/ui.ts` — Popup
-- `sidepanel.html` + `src/js/sidepanel.ts` — SidePanel
+- `popup.html` + `src/js/ui.ts` — Popup (언어선택, 구독 상태, 결제 UI)
+- `src/contents/modal.ts` + `src/css/modal.css` — Shadow DOM 모달 (분석 결과 표시)
+- `src/contents/google-maps-review.ts` — Google Maps Content Script
 - `src/background.js` — Service Worker (구독 체크 + 분석 + 사용량)
-- `src/contents/*.ts` — Content Scripts (IIFE 빌드)
 - `src/js/i18n.js` — 다국어 시스템
 - `src/js/config.js` — API URL, 상수, storage 키
 - `src/js/subscription.js` — checkout, restore, refreshStatus
 - `src/lib/scrapers/*.ts` — 스크래퍼 (기존 유지)
-- `workers/` — Cloudflare Workers
+- `workers/` — Cloudflare Workers (Gemini API)

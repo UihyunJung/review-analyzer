@@ -1,6 +1,5 @@
-export const API_BASE = 'https://paddle-extensions-backend.vercel.app'
-export const WORKERS_BASE =
-  import.meta.env.VITE_API_URL || 'https://place-review-api.uihyun-jung.workers.dev'
+export const API_BASE = import.meta.env.VITE_PADDLE_API_BASE || 'https://paddle-extensions-backend.vercel.app'
+export const WORKERS_BASE = import.meta.env.VITE_WORKERS_BASE || 'https://place-review-api.uihyun-jung.workers.dev'
 
 export const FREE_DAILY_LIMIT = 5
 export const MAX_REVIEWS = 50

@@ -35,9 +35,9 @@ const SELECTORS = {
 
 // --- Place ID 추출 (URL 우선 + DOM fallback) ---
 export function extractPlaceId(url: string, doc: Document): string {
-  // 1순위: URL에서 hex 패턴 추출
-  const hexMatch = url.match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i)
-  if (hexMatch) return hexMatch[1]
+  // 1순위: URL에서 hex 패턴 추출 (마지막 매칭 = 현재 장소)
+  const hexMatches = [...url.matchAll(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/gi)]
+  if (hexMatches.length > 0) return hexMatches[hexMatches.length - 1][1]
 
   // 2순위: URL의 place/ 뒤 세그먼트에서 ChIJ 패턴
   const chiMatch = url.match(/place\/[^/]+\/(ChIJ[A-Za-z0-9_-]+)/)

@@ -1,4 +1,4 @@
 {
   "extName": { "message": "场所评论分析器" },
-  "extDescription": { "message": "Google Maps和Naver Place的AI评论分析。在场所页面点击右下角★按钮，即可获取评分、亮点和注意事项。" }
+  "extDescription": { "message": "Google Maps AI评论分析。在场所页面点击右下角★按钮，即可获取评分、亮点和注意事项。" }
 }

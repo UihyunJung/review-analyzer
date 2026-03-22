@@ -64,19 +64,34 @@
 .state-message { text-align: center; padding: 40px 16px; color: #666; }
 .state-message h2 { font-size: 18px; margin-bottom: 8px; color: #1a1a1a; }
 .state-message p { font-size: 14px; line-height: 1.5; }
-.state-error { background: #fff3f3; color: #e53935; padding: 16px; border-radius: 8px; font-size: 14px; text-align: center; }
+.state-error { background: #fff3f3; color: #e53935; padding: 16px; border-radius: 8px; font-size: 14px; text-align: center; margin-top: 16px; }
 
-/* Loading spinner */
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #e0e0e0;
-  border-top-color: #667eea;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 12px;
+/* Progress bar */
+.progress-wrap {
+  width: 100%;
+  max-width: 240px;
+  margin: 0 auto 16px;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.progress-stage {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+  text-align: center;
+}
 
 /* Content */
 h1 { font-size: 18px; font-weight: 700; margin: 0; }
@@ -124,9 +139,10 @@ h1 { font-size: 18px; font-weight: 700; margin: 0; }
 
 /* Pro gate */
 .pro-gate { background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%); border: 1px dashed #667eea; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 16px; }
-.pro-gate p { font-size: 13px; color: #555; margin-bottom: 8px; }
+.pro-gate p { font-size: 13px; color: #555; margin: 0 0 8px; }
 .pro-gate-btn { background: #667eea; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pro-gate-btn:hover { opacity: 0.9; }
 
 .lang-info { font-size: 12px; color: #999; }
+.cached-notice { font-size: 11px; color: #999; background: #f5f5f5; border-radius: 6px; padding: 8px 12px; text-align: center; margin-bottom: 12px; }
 .result-footer { font-size: 12px; color: #999; text-align: center; margin-top: 8px; }

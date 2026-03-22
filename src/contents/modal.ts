@@ -1,4 +1,5 @@
 import { t } from '../js/i18n.js'
+import type { PlaceInfo } from '../lib/types'
 
 declare module '*.css?inline' {
   const css: string
@@ -6,11 +7,43 @@ declare module '*.css?inline' {
 }
 import modalCss from '../css/modal.css?inline'
 
+// --- 분석 결과 타입 ---
+
+interface AspectData {
+  aspect: string
+  score: number
+  summary: string
+  keywords: string[]
+}
+
+interface TrendData {
+  direction: string
+  reason: string
+}
+
+interface WaitTimeData {
+  estimate: string
+  basedOn: number
+}
+
+interface AnalysisData {
+  aspects?: AspectData[]
+  highlights?: string[]
+  warnings?: string[]
+  trend?: TrendData
+  waitTime?: WaitTimeData
+  bestFor?: string[]
+  languageBreakdown?: Record<string, number>
+  reviewCount?: number
+  cached?: boolean
+  isPro?: boolean
+}
+
 // --- Shadow DOM 기반 모달 ---
 
 let shadowRoot: ShadowRoot | null = null
 let hostEl: HTMLElement | null = null
-let lastResultData: { data: any; placeInfo: any; isPro: boolean } | null = null
+let lastResultData: { data: AnalysisData; placeInfo: PlaceInfo; isPro: boolean } | null = null
 
 const ASPECT_CONFIG: Record<string, { color: string; icon: string }> = {
   food: { color: '#4caf50', icon: '\uD83C\uDF7D\uFE0F' },
@@ -78,16 +111,24 @@ function ensureHost(): ShadowRoot {
   body.className = 'modal-body'
   body.id = 'modal-body'
 
-  // 상태: loading
+  // 상태: loading (progress bar)
   const stateLoading = document.createElement('div')
   stateLoading.id = 'state-loading'
   stateLoading.className = 'state-message'
-  const spinner = document.createElement('div')
-  spinner.className = 'loading-spinner'
-  stateLoading.appendChild(spinner)
-  const loadingText = document.createElement('p')
-  loadingText.textContent = t('analyzing')
-  stateLoading.appendChild(loadingText)
+  const progressWrap = document.createElement('div')
+  progressWrap.className = 'progress-wrap'
+  const progressBg = document.createElement('div')
+  progressBg.className = 'progress-bar-bg'
+  const progressFill = document.createElement('div')
+  progressFill.className = 'progress-bar-fill'
+  progressFill.id = 'progress-fill'
+  progressBg.appendChild(progressFill)
+  progressWrap.appendChild(progressBg)
+  const progressStage = document.createElement('p')
+  progressStage.className = 'progress-stage'
+  progressStage.id = 'progress-stage'
+  progressWrap.appendChild(progressStage)
+  stateLoading.appendChild(progressWrap)
   body.appendChild(stateLoading)
 
   // 상태: error
@@ -97,11 +138,13 @@ function ensureHost(): ShadowRoot {
   stateError.style.display = 'none'
   body.appendChild(stateError)
 
-  // 상태: result
+  // 상태: result (구조를 1회만 생성)
   const stateResult = document.createElement('div')
   stateResult.id = 'state-result'
   stateResult.style.display = 'none'
   body.appendChild(stateResult)
+
+  buildResultDOM(stateResult)
 
   container.appendChild(body)
 
@@ -112,20 +155,12 @@ function ensureHost(): ShadowRoot {
     if (e.target === overlay) hideModal()
   })
 
-  // Pro 게이트 이벤트 위임
-  container.addEventListener('click', (e) => {
-    if ((e.target as Element).closest('.pro-gate-btn')) {
-      chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'monthly' })
-    }
-  })
 
   shadowRoot.appendChild(overlay)
   return shadowRoot
 }
 
 function buildResultDOM(root: HTMLElement) {
-  clearChildren(root)
-
   // Aspects
   const aspectSection = document.createElement('section')
   aspectSection.className = 'section'
@@ -192,10 +227,24 @@ function buildResultDOM(root: HTMLElement) {
   const proGateText = document.createElement('p')
   proGateText.textContent = t('proGateText')
   proGate.appendChild(proGateText)
-  const proGateBtn = document.createElement('button')
-  proGateBtn.className = 'pro-gate-btn'
-  proGateBtn.textContent = t('unlockPro')
-  proGate.appendChild(proGateBtn)
+  const proGateBtns = document.createElement('div')
+  proGateBtns.style.cssText = 'display:flex;gap:8px;justify-content:center'
+  const proMonthlyBtn = document.createElement('button')
+  proMonthlyBtn.className = 'pro-gate-btn'
+  proMonthlyBtn.textContent = t('monthlyPlan')
+  proMonthlyBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'monthly' })
+  })
+  const proAnnualBtn = document.createElement('button')
+  proAnnualBtn.className = 'pro-gate-btn'
+  proAnnualBtn.style.background = '#764ba2'
+  proAnnualBtn.textContent = t('annualPlan')
+  proAnnualBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'annual' })
+  })
+  proGateBtns.appendChild(proMonthlyBtn)
+  proGateBtns.appendChild(proAnnualBtn)
+  proGate.appendChild(proGateBtns)
   root.appendChild(proGate)
 
   // Language
@@ -209,6 +258,13 @@ function buildResultDOM(root: HTMLElement) {
   langSection.appendChild(langInfo)
   root.appendChild(langSection)
 
+  // 캐시 안내
+  const cachedNotice = document.createElement('p')
+  cachedNotice.id = 'cached-notice'
+  cachedNotice.className = 'cached-notice'
+  cachedNotice.style.display = 'none'
+  root.appendChild(cachedNotice)
+
   // Footer
   const footer = document.createElement('footer')
   footer.className = 'result-footer'
@@ -220,7 +276,7 @@ function buildResultDOM(root: HTMLElement) {
 
 // --- 렌더링 함수 (Shadow DOM 기반) ---
 
-function renderAspects(aspects: Array<{ aspect: string; score: number; summary: string; keywords: string[] }>) {
+function renderAspects(aspects: AspectData[]) {
   const container = el('aspects-container')
   clearChildren(container)
 
@@ -298,7 +354,7 @@ function renderList(containerId: string, sectionId: string, items: string[]) {
   }
 }
 
-function renderTrend(trend: { direction: string; reason: string } | undefined) {
+function renderTrend(trend: TrendData | undefined) {
   const container = el('trend-container')
   clearChildren(container)
   if (!trend) return
@@ -330,7 +386,7 @@ function renderTrend(trend: { direction: string; reason: string } | undefined) {
   container.appendChild(div)
 }
 
-function renderWaitTime(waitTime: { estimate: string; basedOn: number } | undefined) {
+function renderWaitTime(waitTime: WaitTimeData | undefined) {
   const container = el('waittime-container')
   clearChildren(container)
   if (!waitTime) return
@@ -385,9 +441,7 @@ function showState(state: 'loading' | 'error' | 'result') {
   }
 }
 
-function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
-  const resultEl = el('state-result')
-  buildResultDOM(resultEl)
+function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean) {
   showState('result')
 
   el('place-name').textContent = placeInfo?.name || ''
@@ -419,12 +473,12 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
   const breakdown = data.languageBreakdown
   if (breakdown && Object.keys(breakdown).length > 0) {
     langSection.style.display = 'block'
-    const total = data.reviewCount || Object.values(breakdown).reduce((a: number, b: number) => a + b, 0)
+    const total = Object.values(breakdown).reduce((a, b) => a + b, 0)
     langInfo.textContent =
       t('reviews') + ': ' +
       Object.entries(breakdown)
-        .sort(([, a]: any, [, b]: any) => b - a)
-        .map(([lang, count]: any) => {
+        .sort(([, a], [, b]) => b - a)
+        .map(([lang, count]) => {
           const langKey = 'lang_' + lang.toLowerCase()
           const translated = t(langKey)
           const label = translated !== langKey ? translated : lang.toUpperCase()
@@ -436,6 +490,15 @@ function renderAnalysis(data: any, placeInfo: any, isPro: boolean) {
   }
 
   el('review-count').textContent = t('basedOnReviews').replace('{count}', String(data.reviewCount || 0))
+
+  // 캐시 안내
+  const cachedNotice = el('cached-notice')
+  if (data.cached) {
+    cachedNotice!.textContent = t('cachedResult')
+    cachedNotice!.style.display = 'block'
+  } else {
+    cachedNotice!.style.display = 'none'
+  }
 }
 
 // --- Public API ---
@@ -464,21 +527,111 @@ export function toggleModal() {
   }
 }
 
+// --- Progress bar 애니메이션 ---
+let progressTimer: ReturnType<typeof setInterval> | null = null
+let progressValue = 0
+
+function stopProgress() {
+  if (progressTimer) {
+    clearInterval(progressTimer)
+    progressTimer = null
+  }
+}
+
+function startProgress(from: number, to: number, durationMs: number) {
+  stopProgress()
+  progressValue = from
+  const fill = el('progress-fill')
+  fill.style.width = `${from}%`
+
+  const steps = Math.ceil(durationMs / 100)
+  let step = 0
+  progressTimer = setInterval(() => {
+    step++
+    // ease-out: 갈수록 느려짐
+    const ratio = step / steps
+    const eased = 1 - Math.pow(1 - ratio, 3)
+    progressValue = from + (to - from) * eased
+    fill.style.width = `${progressValue}%`
+    if (step >= steps) stopProgress()
+  }, 100)
+}
+
 export function showLoading() {
   showModal()
   showState('loading')
+  el('place-name')!.textContent = ''
+  el('place-category')!.textContent = ''
+  // 단계1: 리뷰 수집 (0→40%, 8초 예상)
+  el('progress-stage').textContent = t('loadingCollecting')
+  startProgress(0, 40, 8000)
 }
 
-export function showResult(data: any, placeInfo: any, isPro: boolean) {
+export function setLoadingStage(stage: 'analyzing') {
+  if (stage === 'analyzing') {
+    // 단계2: AI 분석 (현재값→90%, 12초 예상, 90%에서 극도로 느려짐)
+    el('progress-stage').textContent = t('loadingAnalyzing')
+    startProgress(progressValue, 90, 12000)
+  }
+}
+
+export function showResult(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean) {
   lastResultData = { data, placeInfo, isPro }
-  showModal()
-  renderAnalysis(data, placeInfo, isPro)
+  stopProgress()
+  el('progress-fill').style.width = '100%'
+  el('progress-stage').textContent = ''
+  // 바 100% 표시 후 결과 전환
+  setTimeout(() => {
+    showModal()
+    renderAnalysis(data, placeInfo, isPro)
+  }, 300)
 }
 
 export function showError(msg: string) {
+  stopProgress()
   showModal()
   showState('error')
-  el('state-error').textContent = msg
+  const errorEl = el('state-error')
+  errorEl.textContent = msg
+}
+
+export function showExceeded() {
+  stopProgress()
+  showModal()
+  showState('error')
+  const errorEl = el('state-error')
+  errorEl.textContent = ''
+
+  const msg = document.createElement('p')
+  msg.textContent = t('limitReached')
+  msg.style.cssText = 'margin-bottom:12px'
+  errorEl.appendChild(msg)
+
+  const desc = document.createElement('p')
+  desc.textContent = t('upgradeDesc')
+  desc.style.cssText = 'margin-bottom:12px;font-size:12px;color:#666'
+  errorEl.appendChild(desc)
+
+  const btnContainer = document.createElement('div')
+  btnContainer.style.cssText = 'display:flex;gap:8px;justify-content:center'
+
+  const monthlyBtn = document.createElement('button')
+  monthlyBtn.textContent = t('monthlyPlan')
+  monthlyBtn.style.cssText = 'padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer'
+  monthlyBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'monthly' })
+  })
+
+  const annualBtn = document.createElement('button')
+  annualBtn.textContent = t('annualPlan')
+  annualBtn.style.cssText = 'padding:8px 16px;background:#764ba2;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer'
+  annualBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'annual' })
+  })
+
+  btnContainer.appendChild(monthlyBtn)
+  btnContainer.appendChild(annualBtn)
+  errorEl.appendChild(btnContainer)
 }
 
 export function hasResult(): boolean {
