@@ -1,7 +1,9 @@
 node_modules/
 dist/
 .env
-.env.local
+.env.*
 *.pem
 .DS_Store
 .wrangler
+.wrangler-tmp/
+.playwright-mcp/
