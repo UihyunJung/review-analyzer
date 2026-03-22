@@ -1,15 +1,37 @@
 import { extractNaverPlaceReviews } from '../lib/scrapers/naver-place'
 import { getDefaultLanguage, setLanguage, t } from '../js/i18n.js'
-import { showLoading, showResult, showError, hideModal, hasResult, toggleModal, clearResult } from './modal'
+import { STORAGE_KEYS } from '../js/config.js'
+import { showLoading, showResult, showError, toggleModal } from './modal'
 
-setLanguage(getDefaultLanguage())
+// 저장된 언어 복원 (비동기)
+let currentLang = getDefaultLanguage()
+setLanguage(currentLang)
+
+chrome.storage.local.get(STORAGE_KEYS.LANGUAGE).then((data) => {
+  if (data[STORAGE_KEYS.LANGUAGE]) {
+    currentLang = data[STORAGE_KEYS.LANGUAGE]
+    setLanguage(currentLang)
+    if (analyzeBtn) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
+    if (toggleBtn) toggleBtn.title = t('togglePanel') || 'Show/hide analysis'
+  }
+})
+
+function createButtonContainer(): HTMLDivElement {
+  const container = document.createElement('div')
+  Object.assign(container.style, {
+    position: 'fixed',
+    bottom: '24px',
+    right: '24px',
+    display: 'flex',
+    gap: '8px',
+    zIndex: '10000'
+  })
+  return container
+}
 
 function createAnalyzeButton(): HTMLButtonElement {
   const btn = document.createElement('button')
   Object.assign(btn.style, {
-    position: 'fixed',
-    bottom: '24px',
-    right: '24px',
     padding: '12px 24px',
     background: '#667eea',
     color: 'white',
@@ -18,7 +40,6 @@ function createAnalyzeButton(): HTMLButtonElement {
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    zIndex: '10000',
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     transition: 'all 0.2s ease'
   })
@@ -29,23 +50,20 @@ function createAnalyzeButton(): HTMLButtonElement {
 function createToggleButton(): HTMLButtonElement {
   const btn = document.createElement('button')
   Object.assign(btn.style, {
-    position: 'fixed',
-    bottom: '24px',
-    right: '210px',
     padding: '12px 14px',
     background: '#43a047',
     color: 'white',
     border: 'none',
     borderRadius: '12px',
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: '600',
-    zIndex: '10000',
     boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
     transition: 'all 0.2s ease',
     display: 'none'
   })
-  btn.textContent = '\uD83D\uDCCA'
+  btn.textContent = '\u2630'
+  btn.title = t('togglePanel') || 'Show/hide analysis'
   return btn
 }
 
@@ -72,7 +90,7 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
     }
 
     chrome.runtime.sendMessage(
-      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'naver_place', lang: getDefaultLanguage() },
+      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'naver_place', lang: currentLang },
       (response) => {
         loading = false
         if (response?.success) {
@@ -110,11 +128,24 @@ function resetButton(btn: HTMLButtonElement) {
   btn.style.opacity = '1'
 }
 
+const btnContainer = createButtonContainer()
 const analyzeBtn = createAnalyzeButton()
 const toggleBtn = createToggleButton()
+
+btnContainer.appendChild(analyzeBtn)
+btnContainer.appendChild(toggleBtn)
 
 analyzeBtn.addEventListener('click', () => handleAnalyzeClick(analyzeBtn))
 toggleBtn.addEventListener('click', () => toggleModal())
 
-document.body.appendChild(analyzeBtn)
-document.body.appendChild(toggleBtn)
+document.body.appendChild(btnContainer)
+
+// --- 언어 변경 실시간 반영 ---
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes[STORAGE_KEYS.LANGUAGE]) {
+    currentLang = changes[STORAGE_KEYS.LANGUAGE].newValue || getDefaultLanguage()
+    setLanguage(currentLang)
+    if (!loading) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
+    toggleBtn.title = t('togglePanel') || 'Show/hide analysis'
+  }
+})

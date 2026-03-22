@@ -1,8 +1,20 @@
 import { extractGoogleMapsReviews } from '../lib/scrapers/google-maps'
 import { getDefaultLanguage, setLanguage, t } from '../js/i18n.js'
+import { STORAGE_KEYS } from '../js/config.js'
 import { showLoading, showResult, showError, hideModal, hasResult, toggleModal, clearResult } from './modal'
 
-setLanguage(getDefaultLanguage())
+// 저장된 언어 복원 (비동기)
+let currentLang = getDefaultLanguage()
+setLanguage(currentLang)
+
+chrome.storage.local.get(STORAGE_KEYS.LANGUAGE).then((data) => {
+  if (data[STORAGE_KEYS.LANGUAGE]) {
+    currentLang = data[STORAGE_KEYS.LANGUAGE]
+    setLanguage(currentLang)
+    if (analyzeBtn) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
+    if (toggleBtn) toggleBtn.title = t('togglePanel') || 'Show/hide analysis'
+  }
+})
 
 function createButtonContainer(): HTMLDivElement {
   const container = document.createElement('div')
@@ -78,7 +90,7 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
     }
 
     chrome.runtime.sendMessage(
-      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'google_maps', lang: getDefaultLanguage() },
+      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'google_maps', lang: currentLang },
       (response) => {
         loading = false
         if (response?.success) {
@@ -163,3 +175,13 @@ const observer = new MutationObserver(() => {
   }
 })
 observer.observe(document.body, { childList: true, subtree: true })
+
+// --- 언어 변경 실시간 반영 ---
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes[STORAGE_KEYS.LANGUAGE]) {
+    currentLang = changes[STORAGE_KEYS.LANGUAGE].newValue || getDefaultLanguage()
+    setLanguage(currentLang)
+    if (!loading) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
+    toggleBtn.title = t('togglePanel') || 'Show/hide analysis'
+  }
+})
