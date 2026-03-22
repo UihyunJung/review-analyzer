@@ -1,33 +1,31 @@
 import type { Review, PlaceInfo } from '../types'
 import { MAX_REVIEWS, MAX_REVIEW_LENGTH } from '../../js/config.js'
 
-// --- Selectors (상수 분리: DOM 변경 시 여기만 수정) ---
+// --- Selectors (안정적 셀렉터 우선, 난독화 클래스 fallback) ---
 const SELECTORS = {
-  // 리뷰 패널 열기
+  // 리뷰 탭 열기 (aria-label 기반 — 안정적)
+  REVIEW_TAB: '[role="tab"][aria-label*="\ub9ac\ubdf0"], [role="tab"][aria-label*="review" i]',
+  // fallback: 기존 방식
   ALL_REVIEWS_BUTTON: 'button[jsaction*="reviewChart"]',
-  REVIEWS_TAB_COUNT: 'button[aria-label*="review"]',
 
-  // 리뷰 컨테이너 (패널 내부 스크롤 영역)
+  // 리뷰 컨테이너 (난독화 클래스 — findScrollableParent로 fallback)
   REVIEW_PANEL_SCROLLABLE: 'div.m6QErb.DxyBCb',
 
-  // 정렬 버튼
-  SORT_BUTTON: 'button[data-value="Sort"]',
-  SORT_NEWEST: 'li[data-index="1"]',
-
-  // 개별 리뷰
+  // 개별 리뷰 (data-review-id — 안정적)
   REVIEW_ITEM: 'div[data-review-id]',
+  // 리뷰 내부 요소 (난독화 클래스 + aria-label fallback)
   REVIEW_TEXT: 'span.wiI7pd',
   REVIEW_MORE_BUTTON: 'button.w8nwRe.kyuRq',
-  REVIEW_RATING: 'span.kvMYJc',
+  REVIEW_RATING: 'span.kvMYJc, [aria-label*="\ubcc4\ud45c"], [aria-label*="star" i]',
   REVIEW_AUTHOR: 'div.d4r55',
   REVIEW_DATE: 'span.rsqaWe',
   REVIEW_LANG: '[lang]',
 
-  // 장소 메타데이터
-  PLACE_NAME: 'h1.DUwDvf',
+  // 장소 메타데이터 (h1, aria-label — 안정적)
+  PLACE_NAME: 'h1',
   PLACE_CATEGORY: 'button.DkEaL',
-  PLACE_RATING: 'div.F7nice span[aria-hidden="true"]',
-  PLACE_REVIEW_COUNT: 'span[aria-label*="review"]',
+  PLACE_RATING: '[aria-label*="\ubcc4\ud45c"], div.F7nice span[aria-hidden="true"]',
+  PLACE_REVIEW_COUNT: '[aria-label*="\ub9ac\ubdf0"], span[aria-label*="review" i]',
   PLACE_ADDRESS: 'button[data-item-id="address"]',
 
   // place_id 추출
@@ -66,45 +64,27 @@ export function parseRelativeDate(relativeStr: string): Date | null {
   const str = relativeStr.toLowerCase().trim()
 
   const patterns: [RegExp, (n: number) => Date][] = [
+    // 영어
     [/(\d+)\s*second/i, (n) => new Date(now.getTime() - n * 1000)],
     [/(\d+)\s*minute/i, (n) => new Date(now.getTime() - n * 60 * 1000)],
     [/(\d+)\s*hour/i, (n) => new Date(now.getTime() - n * 3600 * 1000)],
     [/(\d+)\s*day/i, (n) => new Date(now.getTime() - n * 86400 * 1000)],
     [/(\d+)\s*week/i, (n) => new Date(now.getTime() - n * 7 * 86400 * 1000)],
-    [
-      /(\d+)\s*month/i,
-      (n) => {
-        const d = new Date(now)
-        d.setMonth(d.getMonth() - n)
-        return d
-      }
-    ],
-    [
-      /(\d+)\s*year/i,
-      (n) => {
-        const d = new Date(now)
-        d.setFullYear(d.getFullYear() - n)
-        return d
-      }
-    ],
-    [
-      /^a\s+month/i,
-      () => {
-        const d = new Date(now)
-        d.setMonth(d.getMonth() - 1)
-        return d
-      }
-    ],
-    [
-      /^a\s+year/i,
-      () => {
-        const d = new Date(now)
-        d.setFullYear(d.getFullYear() - 1)
-        return d
-      }
-    ],
+    [/(\d+)\s*month/i, (n) => { const d = new Date(now); d.setMonth(d.getMonth() - n); return d }],
+    [/(\d+)\s*year/i, (n) => { const d = new Date(now); d.setFullYear(d.getFullYear() - n); return d }],
+    [/^a\s+month/i, () => { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d }],
+    [/^a\s+year/i, () => { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d }],
     [/^a\s+week/i, () => new Date(now.getTime() - 7 * 86400 * 1000)],
-    [/^a\s+day|^yesterday/i, () => new Date(now.getTime() - 86400 * 1000)]
+    [/^a\s+day|^yesterday/i, () => new Date(now.getTime() - 86400 * 1000)],
+    // 한국어
+    [/(\d+)\s*초\s*전/, (n) => new Date(now.getTime() - n * 1000)],
+    [/(\d+)\s*분\s*전/, (n) => new Date(now.getTime() - n * 60 * 1000)],
+    [/(\d+)\s*시간\s*전/, (n) => new Date(now.getTime() - n * 3600 * 1000)],
+    [/(\d+)\s*일\s*전/, (n) => new Date(now.getTime() - n * 86400 * 1000)],
+    [/(\d+)\s*주\s*전/, (n) => new Date(now.getTime() - n * 7 * 86400 * 1000)],
+    [/(\d+)\s*달\s*전/, (n) => { const d = new Date(now); d.setMonth(d.getMonth() - n); return d }],
+    [/(\d+)\s*개월\s*전/, (n) => { const d = new Date(now); d.setMonth(d.getMonth() - n); return d }],
+    [/(\d+)\s*년\s*전/, (n) => { const d = new Date(now); d.setFullYear(d.getFullYear() - n); return d }]
   ]
 
   for (const [regex, calc] of patterns) {
@@ -194,10 +174,9 @@ function findScrollableParent(element: Element): Element | null {
 
 // --- 리뷰 패널 열기 ---
 async function openReviewPanel(doc: Document): Promise<Element | null> {
-  // "All reviews" 버튼 또는 리뷰 수 버튼 클릭
-  const reviewBtn =
-    doc.querySelector(SELECTORS.ALL_REVIEWS_BUTTON) ||
-    doc.querySelector(SELECTORS.REVIEWS_TAB_COUNT)
+  // 리뷰 탭 클릭 (aria-label 기반 우선, fallback: 기존 방식)
+  const reviewTab = doc.querySelector(SELECTORS.REVIEW_TAB)
+  const reviewBtn = reviewTab || doc.querySelector(SELECTORS.ALL_REVIEWS_BUTTON)
 
   if (reviewBtn && reviewBtn instanceof HTMLElement) {
     reviewBtn.click()

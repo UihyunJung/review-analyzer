@@ -63,8 +63,16 @@ describe('parseRelativeDate', () => {
     expect(diffDays).toBeLessThan(8)
   })
 
-  it('returns null for non-English date', () => {
-    expect(parseRelativeDate('2개월 전')).toBeNull()
+  it('parses Korean dates', () => {
+    const date = parseRelativeDate('2개월 전')
+    expect(date).not.toBeNull()
+    const diffMs = Date.now() - date!.getTime()
+    const diffDays = diffMs / (1000 * 60 * 60 * 24)
+    expect(diffDays).toBeGreaterThan(50)
+    expect(diffDays).toBeLessThan(70)
+  })
+
+  it('returns null for unsupported languages', () => {
     expect(parseRelativeDate('2か月前')).toBeNull()
   })
 
