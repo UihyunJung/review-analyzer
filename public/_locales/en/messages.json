@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Place Review Analyzer" },
-  "extDescription": { "message": "AI-powered review analysis for Google Maps. Visit any place page, click the ★ button at the bottom-right, and get instant aspect scores, highlights, and warnings." }
+  "extDescription": { "message": "AI review analysis for Google Maps. Click ★ Analyze on any place page to get aspect scores, highlights, and warnings." }
 }

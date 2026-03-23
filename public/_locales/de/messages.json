@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Place Review Analyzer" },
-  "extDescription": { "message": "KI-gesteuerte Bewertungsanalyse für Google Maps. Öffnen Sie eine Ortsseite, klicken Sie auf den ★-Button unten rechts und erhalten Sie sofort Bewertungen, Highlights und Hinweise." }
+  "extDescription": { "message": "KI-Bewertungsanalyse für Google Maps. Klicken Sie ★ Analysieren auf einer Ortsseite für Scores, Highlights und Hinweise." }
 }

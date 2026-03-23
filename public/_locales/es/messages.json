@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Place Review Analyzer" },
-  "extDescription": { "message": "Análisis de reseñas con IA para Google Maps. Visita una página de lugar, haz clic en el botón ★ en la esquina inferior derecha y obtén puntuaciones, destacados y advertencias al instante." }
+  "extDescription": { "message": "Análisis de reseñas con IA para Google Maps. Haz clic en ★ Analizar para obtener puntuaciones, destacados y advertencias." }
 }
