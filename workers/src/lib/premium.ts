@@ -6,11 +6,13 @@ import type { Env } from '../index'
  */
 const cache = new Map<string, { isPro: boolean; expiresAt: number }>()
 
-export async function checkPremium(installId: string, env: Env): Promise<boolean> {
+export async function checkPremium(installId: string, env: Env, skipCache = false): Promise<boolean> {
   if (!installId) return false
 
-  const cached = cache.get(installId)
-  if (cached && Date.now() < cached.expiresAt) return cached.isPro
+  if (!skipCache) {
+    const cached = cache.get(installId)
+    if (cached && Date.now() < cached.expiresAt) return cached.isPro
+  }
 
   // 1000개 이상이면 정리
   if (cache.size > 1000) {

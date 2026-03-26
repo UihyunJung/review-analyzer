@@ -13,9 +13,11 @@ export async function handleUsage(
     const identity = extractIdentity(request)
     const today = new Date().toISOString().split('T')[0]
 
-    // Pro 체크 — Vercel /api/status (1분 캐시)
+    // Pro 체크 — Vercel /api/status (1분 캐시, refresh=true 시 캐시 무시)
+    const url = new URL(request.url)
+    const skipCache = url.searchParams.get('refresh') === 'true'
     const installId = identity.deviceId
-    const isPro = await checkPremium(installId, env)
+    const isPro = await checkPremium(installId, env, skipCache)
     const limit = isPro ? parseInt(env.PRO_DAILY_LIMIT, 10) : parseInt(env.FREE_DAILY_LIMIT, 10)
 
     const filter = `device_id=eq.${encodeURIComponent(identity.deviceId)}`

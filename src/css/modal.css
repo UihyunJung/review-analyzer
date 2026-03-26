@@ -143,6 +143,34 @@ h1 { font-size: 18px; font-weight: 700; margin: 0; }
 .pro-gate-btn { background: #667eea; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pro-gate-btn:hover { opacity: 0.9; }
 
+/* Blur paywall */
+.blurred { filter: blur(4px); pointer-events: none; user-select: none; }
+.blur-cta { display: block; text-align: center; margin-top: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #667eea; cursor: pointer; background: none; border: 1px solid #667eea; border-radius: 6px; }
+.blur-cta:hover { background: #667eea11; }
+
+/* History */
+#history-items { max-height: 300px; overflow-y: auto; }
+.history-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 12px; gap: 8px; }
+.history-name { font-weight: 600; color: #333; }
+.history-cat { color: #999; margin-left: 6px; }
+.history-date { color: #999; white-space: nowrap; font-size: 11px; }
+.history-msg { font-size: 12px; color: #999; text-align: center; }
+
+/* Compare */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.compare-col { border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; }
+.compare-name { font-size: 13px; margin: 0 0 4px; color: #333; font-weight: 600; }
+.compare-cat { font-size: 11px; color: #999; margin: 0 0 8px; }
+.compare-aspect { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+
+/* Review quote */
+.review-quote-card { background: #f5f5f5; border-left: 3px solid #667eea; padding: 10px 12px; margin-bottom: 8px; border-radius: 4px; }
+.quote-aspect { font-size: 11px; font-weight: 600; color: #667eea; }
+.quote-text { font-size: 12px; color: #555; line-height: 1.4; margin: 4px 0 0; font-style: italic; }
+
+/* Pro list labels */
+.pro-list-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+
 .lang-info { font-size: 12px; color: #999; }
 .cached-notice { font-size: 11px; color: #999; background: #f5f5f5; border-radius: 6px; padding: 8px 12px; text-align: center; margin-bottom: 12px; }
 .result-footer { font-size: 12px; color: #999; text-align: center; margin-top: 8px; }

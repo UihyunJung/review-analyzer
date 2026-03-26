@@ -199,12 +199,16 @@ const observer = new MutationObserver(() => {
 })
 observer.observe(document.body, { childList: true, subtree: true })
 
-// --- 언어 변경 실시간 반영 ---
+// --- storage 변경 실시간 반영 ---
 chrome.storage.onChanged.addListener((changes) => {
   if (changes[STORAGE_KEYS.LANGUAGE]) {
     currentLang = changes[STORAGE_KEYS.LANGUAGE].newValue || getDefaultLanguage()
     setLanguage(currentLang)
     if (!loading) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
     toggleBtn.title = t('togglePanel') || 'Show/hide analysis'
+  }
+  if (changes[STORAGE_KEYS.PREMIUM]?.newValue === true && exceeded) {
+    exceeded = false
+    resetButton(analyzeBtn)
   }
 })

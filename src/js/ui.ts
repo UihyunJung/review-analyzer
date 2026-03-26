@@ -110,6 +110,9 @@ async function init() {
       expiresAt = result.expiresAt
       subStatus = result.status
       updatePremiumUI()
+      chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true }, (response) => {
+        if (response?.success && response.data) updateUsageUI(response.data)
+      })
     }
   })
 
@@ -128,6 +131,10 @@ function bindEvents() {
     updatePremiumUI()
     showMessage('', '')
     chrome.storage.local.set({ [STORAGE_KEYS.LANGUAGE]: lang })
+    // applyI18n이 사용량 텍스트를 "로딩중.."으로 덮어쓰므로 재요청
+    chrome.runtime.sendMessage({ type: 'GET_USAGE' }, (response) => {
+      if (response?.success && response.data) updateUsageUI(response.data)
+    })
   })
 
   el('btn-monthly').addEventListener('click', () => handleCheckout('monthly'))
@@ -157,6 +164,14 @@ function bindEvents() {
       expiresAt = result.expiresAt
       subStatus = result.status
       updatePremiumUI()
+      // 사용량도 갱신 (Pro 한도 반영, 캐시 무시)
+      chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true }, (response) => {
+        if (response?.success && response.data) updateUsageUI(response.data)
+      })
+      // 메시지 표시 (패널이 닫혔을 수 있으므로 다시 열기)
+      if (!result.premium) {
+        el('upgrade-panel').style.display = 'block'
+      }
       showMessage(
         result.premium ? t('restoreSuccess') : t('verifyNotFound'),
         result.premium ? 'success' : 'error'
@@ -194,6 +209,10 @@ function bindEvents() {
       if (result.restored) {
         isPremium = true
         updatePremiumUI()
+        // 사용량도 갱신 (Pro 한도 반영, 캐시 무시)
+        chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true }, (response) => {
+          if (response?.success && response.data) updateUsageUI(response.data)
+        })
         showMessage(t('restoreSuccess'), 'success')
       } else {
         const msg = result.reason === 'cooldown' ? t('cooldownMessage') : t('restoreFail')
@@ -221,6 +240,9 @@ function bindEvents() {
       changes[STORAGE_KEYS.SUB_STATUS]
     ) {
       updatePremiumUI()
+      chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true }, (response) => {
+        if (response?.success && response.data) updateUsageUI(response.data)
+      })
     }
     if (changes[STORAGE_KEYS.SYNC_FAILED]) {
       el('sync-notice').style.display = changes[STORAGE_KEYS.SYNC_FAILED].newValue

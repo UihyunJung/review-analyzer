@@ -39,9 +39,15 @@
       <details class="already-paid">
         <summary data-i18n="alreadyPaid">Already paid?</summary>
         <div class="already-paid-actions">
-          <button id="btn-verify" class="link-btn" data-i18n="verifyPurchase">Verify purchase</button>
+          <div class="paid-action">
+            <button id="btn-verify" class="link-btn" data-i18n="verifyPurchase">Verify purchase</button>
+            <p class="paid-action-desc" data-i18n="verifyDesc">If Pro isn't showing after payment</p>
+          </div>
           <span class="separator">·</span>
-          <button id="btn-restore-link" class="link-btn" data-i18n="restoreLink">Restore purchase</button>
+          <div class="paid-action">
+            <button id="btn-restore-link" class="link-btn" data-i18n="restoreLink">Restore purchase</button>
+            <p class="paid-action-desc" data-i18n="restoreDesc">After reinstall or on another device</p>
+          </div>
         </div>
         <div id="restore-section" class="restore-section" style="display:none">
           <input type="email" id="restore-email" data-i18n-placeholder="emailPlaceholder" placeholder="Email used for purchase">
