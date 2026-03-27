@@ -1,14 +1,5 @@
 import type { Env } from '../index'
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{ text: string }>
-    }
-  }>
-  modelVersion?: string
-}
-
 export async function callGemini(
   env: Env,
   systemPrompt: string,
@@ -16,13 +7,7 @@ export async function callGemini(
   maxRetries = 1
 ): Promise<{ text: string; model: string }> {
   const model = env.GEMINI_MODEL
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-
-  const body = JSON.stringify({
-    system_instruction: { parts: [{ text: systemPrompt }] },
-    contents: [{ parts: [{ text: userMessage }] }],
-    generationConfig: { temperature: 0.7 }
-  })
+  const proxyUrl = `${env.PADDLE_BACKEND_URL}/api/gemini`
 
   let lastError: Error | null = null
 
@@ -31,23 +16,24 @@ export async function callGemini(
       await new Promise((r) => setTimeout(r, 2000 * attempt))
     }
 
-    const res = await fetch(url, {
+    const res = await fetch(proxyUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': env.GEMINI_API_KEY
-      },
-      body
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        systemPrompt,
+        userMessage,
+        temperature: 0.7
+      })
     })
 
     if (res.ok) {
-      const data = (await res.json()) as GeminiResponse
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-      return { text, model: data.modelVersion ?? model }
+      const data = (await res.json()) as { text: string; model: string }
+      return { text: data.text ?? '', model: data.model ?? model }
     }
 
     const errorText = await res.text()
-    console.error(`Gemini API error ${res.status}: ${errorText}`)
+    console.error(`Gemini proxy error ${res.status}: ${errorText}`)
     lastError = new Error(`AI service error (${res.status})`)
 
     // 429 (rate limit) 또는 503 (overloaded)만 재시도
@@ -55,7 +41,7 @@ export async function callGemini(
       throw lastError
     }
 
-    console.error(`Gemini API ${res.status}, retry ${attempt + 1}/${maxRetries}`)
+    console.error(`Gemini proxy ${res.status}, retry ${attempt + 1}/${maxRetries}`)
   }
 
   throw lastError ?? new Error('Gemini API failed')

@@ -43,7 +43,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // === 메시지 핸들러 ===
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'check-status') {
-    checkSubscriptionStatus().then(async () => {
+    checkSubscriptionStatus(true).then(async () => {
       const keys = [
         STORAGE_KEYS.PREMIUM,
         STORAGE_KEYS.PLAN_TYPE,
@@ -67,7 +67,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'GET_USAGE') {
-    handleGetUsage(sendResponse)
+    handleGetUsage(sendResponse, msg.refresh, msg.migrate)
+    return true
+  }
+
+  if (msg.type === 'GET_HISTORY') {
+    handleGetHistory(sendResponse)
+    return true
+  }
+
+  if (msg.type === 'GET_HISTORY_DETAIL') {
+    handleGetHistoryDetail(msg.id, sendResponse)
+    return true
+  }
+
+  if (msg.type === 'COMPARE_PLACES') {
+    handleComparePlaces(msg.ids, sendResponse)
     return true
   }
 
@@ -151,12 +166,62 @@ async function handleAnalyze(request, sendResponse) {
   }
 }
 
-// === 사용량 핸들러 ===
-async function handleGetUsage(sendResponse) {
+// === 히스토리 핸들러 ===
+async function handleGetHistory(sendResponse) {
   try {
     const installId = await ensureInstallId()
+    const res = await fetch(`${WORKERS_BASE}/history`, {
+      headers: { 'X-Device-ID': installId }
+    })
+    const result = await res.json()
+    sendResponse(res.ok ? result : { success: false, error: result.error || 'Failed to fetch history' })
+  } catch (err) {
+    console.error('[GET_HISTORY failed]', err)
+    sendResponse({ success: false, error: 'Network error' })
+  }
+}
 
-    const res = await fetch(`${WORKERS_BASE}/usage`, { headers: { 'X-Device-ID': installId } })
+async function handleGetHistoryDetail(id, sendResponse) {
+  try {
+    const installId = await ensureInstallId()
+    const res = await fetch(`${WORKERS_BASE}/history?id=${encodeURIComponent(id)}`, {
+      headers: { 'X-Device-ID': installId }
+    })
+    const result = await res.json()
+    sendResponse(res.ok ? result : { success: false, error: result.error || 'Not found' })
+  } catch (err) {
+    console.error('[GET_HISTORY_DETAIL failed]', err)
+    sendResponse({ success: false, error: 'Network error' })
+  }
+}
+
+// === 비교 핸들러 ===
+async function handleComparePlaces(ids, sendResponse) {
+  try {
+    const installId = await ensureInstallId()
+    const res = await fetch(`${WORKERS_BASE}/compare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device-ID': installId },
+      body: JSON.stringify({ ids })
+    })
+    const result = await res.json()
+    sendResponse(res.ok ? result : { success: false, error: result.error || 'Compare failed' })
+  } catch (err) {
+    console.error('[COMPARE_PLACES failed]', err)
+    sendResponse({ success: false, error: 'Network error' })
+  }
+}
+
+// === 사용량 핸들러 ===
+async function handleGetUsage(sendResponse, refresh = false, migrate = null) {
+  try {
+    const installId = await ensureInstallId()
+    const params = new URLSearchParams()
+    if (refresh) params.set('refresh', 'true')
+    if (migrate) params.set('migrate', migrate)
+    const qs = params.toString()
+    const url = qs ? `${WORKERS_BASE}/usage?${qs}` : `${WORKERS_BASE}/usage`
+    const res = await fetch(url, { headers: { 'X-Device-ID': installId } })
 
     if (res.ok) {
       const result = await res.json()

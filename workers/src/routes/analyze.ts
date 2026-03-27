@@ -76,8 +76,15 @@ function buildProSystemPrompt(category: string, site: string, lang: string): str
 Also include these additional fields in the JSON (keys in English, values in ${langName}):
 "trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "positive|negative|mixed", "direction": "improving|declining|stable", "reason": "reason in ${langName}" },
 "waitTime": { "estimate": "estimated wait in ${langName} or insufficient data", "basedOn": numberOfReviewsMentioningWait },
-"bestFor": ["suggestion1 in ${langName}", "suggestion2", "suggestion3"]
-If fewer than 3 reviews mention wait times, return estimate as "insufficient data".`
+"bestFor": ["suggestion1 in ${langName}", "suggestion2", "suggestion3"],
+"topPicks": ["top recommendation based on reviews in ${langName}", "pick2", "pick3"],
+"avoid": ["thing to avoid based on reviews in ${langName}", "avoid2"],
+"tips": ["practical tip for visitors in ${langName}", "tip2", "tip3"],
+"topReviews": [{"aspect": "food", "quote": "exact quote from a review, max 80 characters", "rating": 5}, {"aspect": "service", "quote": "...", "rating": 3}]
+For topPicks/avoid/tips: adapt to the place category (e.g. menu items for restaurants, room types for hotels, visit tips for attractions).
+For topReviews: select 2-4 representative quotes, one per aspect. Each quote must be max 80 characters.
+If fewer than 3 reviews mention wait times, return estimate as "insufficient data".
+If data is insufficient for a field, return an empty array.`
 }
 
 function buildUserMessage(reviews: Review[]): string {

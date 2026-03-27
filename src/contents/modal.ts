@@ -26,6 +26,12 @@ interface WaitTimeData {
   basedOn: number
 }
 
+interface TopReviewData {
+  aspect: string
+  quote: string
+  rating: number
+}
+
 interface AnalysisData {
   aspects?: AspectData[]
   highlights?: string[]
@@ -33,6 +39,10 @@ interface AnalysisData {
   trend?: TrendData
   waitTime?: WaitTimeData
   bestFor?: string[]
+  topPicks?: string[]
+  avoid?: string[]
+  tips?: string[]
+  topReviews?: TopReviewData[]
   languageBreakdown?: Record<string, number>
   reviewCount?: number
   cached?: boolean
@@ -217,7 +227,47 @@ function buildResultDOM(root: HTMLElement) {
   const bestforContainer = document.createElement('div')
   bestforContainer.id = 'bestfor-container'
   proSection.appendChild(bestforContainer)
+  const toppicksContainer = document.createElement('div')
+  toppicksContainer.id = 'toppicks-container'
+  proSection.appendChild(toppicksContainer)
+  const avoidContainer2 = document.createElement('div')
+  avoidContainer2.id = 'avoid-container'
+  proSection.appendChild(avoidContainer2)
+  const tipsContainer = document.createElement('div')
+  tipsContainer.id = 'tips-container'
+  proSection.appendChild(tipsContainer)
+  const topReviewsContainer = document.createElement('div')
+  topReviewsContainer.id = 'topreviews-container'
+  proSection.appendChild(topReviewsContainer)
   root.appendChild(proSection)
+
+  // History section (Pro only)
+  const historySection = document.createElement('section')
+  historySection.className = 'section'
+  historySection.id = 'history-section'
+  historySection.style.display = 'none'
+  const historyBtn = document.createElement('button')
+  historyBtn.id = 'history-btn'
+  historyBtn.className = 'blur-cta'
+  historyBtn.style.cssText = 'width:100%;margin-bottom:8px'
+  historyBtn.textContent = t('viewHistory')
+  historyBtn.addEventListener('click', () => {
+    const listEl = el('history-list')
+    if (listEl.style.display === 'none') {
+      listEl.style.display = 'block'
+      historyBtn.textContent = t('hideHistory')
+      loadHistory()
+    } else {
+      listEl.style.display = 'none'
+      historyBtn.textContent = t('viewHistory')
+    }
+  })
+  historySection.appendChild(historyBtn)
+  const historyList = document.createElement('div')
+  historyList.id = 'history-list'
+  historyList.style.display = 'none'
+  historySection.appendChild(historyList)
+  root.appendChild(historySection)
 
   // Pro gate
   const proGate = document.createElement('section')
@@ -276,7 +326,7 @@ function buildResultDOM(root: HTMLElement) {
 
 // --- 렌더링 함수 (Shadow DOM 기반) ---
 
-function renderAspects(aspects: AspectData[]) {
+function renderAspects(aspects: AspectData[], isPro: boolean) {
   const container = el('aspects-container')
   clearChildren(container)
 
@@ -313,14 +363,14 @@ function renderAspects(aspects: AspectData[]) {
     barBg.appendChild(barFill)
 
     const summary = document.createElement('p')
-    summary.className = 'aspect-summary'
+    summary.className = isPro ? 'aspect-summary' : 'aspect-summary blurred'
     summary.textContent = a.summary
 
     card.appendChild(header)
     card.appendChild(barBg)
     card.appendChild(summary)
 
-    if (a.keywords?.length) {
+    if (isPro && a.keywords?.length) {
       const tags = document.createElement('div')
       tags.className = 'aspect-keywords'
       for (const kw of a.keywords) {
@@ -338,7 +388,7 @@ function renderAspects(aspects: AspectData[]) {
   }
 }
 
-function renderList(containerId: string, sectionId: string, items: string[]) {
+function renderList(containerId: string, sectionId: string, items: string[] | undefined, isPro: boolean, freeLimit?: number) {
   const list = el(containerId)
   const section = el(sectionId)
   clearChildren(list)
@@ -347,10 +397,21 @@ function renderList(containerId: string, sectionId: string, items: string[]) {
     return
   }
   section.style.display = 'block'
-  for (const item of items) {
+  const limit = isPro || freeLimit == null ? items.length : freeLimit
+  for (let i = 0; i < items.length; i++) {
     const li = document.createElement('li')
-    li.textContent = item
+    li.textContent = items[i]
+    if (i >= limit) li.className = 'blurred'
     list.appendChild(li)
+  }
+  if (!isPro && freeLimit != null && items.length > freeLimit) {
+    const cta = document.createElement('button')
+    cta.className = 'blur-cta'
+    cta.textContent = t('proGateText')
+    cta.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'monthly' })
+    })
+    list.appendChild(cta)
   }
 }
 
@@ -365,6 +426,12 @@ function renderTrend(trend: TrendData | undefined) {
     stable: { icon: '\u2192', label: t('trendStable'), cls: 'trend-stable' }
   }
   const c = trendConfig[trend.direction] || trendConfig.stable
+
+  const title = document.createElement('p')
+  title.className = 'pro-list-label'
+  title.style.color = '#333'
+  title.textContent = t('trendTitle')
+  container.appendChild(title)
 
   const div = document.createElement('div')
   div.className = `trend-badge ${c.cls}`
@@ -435,6 +502,249 @@ function renderBestFor(tags: string[] | undefined) {
   container.appendChild(tagsDiv)
 }
 
+function renderProList(containerId: string, label: string, items: string[] | undefined, color: string) {
+  const container = el(containerId)
+  clearChildren(container)
+  if (!items?.length) return
+
+  const labelEl = document.createElement('p')
+  labelEl.className = 'pro-list-label'
+  labelEl.style.color = color
+  labelEl.textContent = label
+  container.appendChild(labelEl)
+  const list = document.createElement('ul')
+  list.className = 'result-list'
+  for (const item of items) {
+    const li = document.createElement('li')
+    li.style.color = color
+    li.textContent = item
+    list.appendChild(li)
+  }
+  container.appendChild(list)
+}
+
+function renderTopReviews(reviews: TopReviewData[] | undefined) {
+  const container = el('topreviews-container')
+  clearChildren(container)
+  if (!reviews?.length) return
+
+  const label = document.createElement('p')
+  label.className = 'pro-list-label'
+  label.style.color = '#333'
+  label.textContent = t('topReviews')
+  container.appendChild(label)
+
+  for (const review of reviews) {
+    const card = document.createElement('div')
+    card.className = 'review-quote-card'
+
+    const aspectLabel = document.createElement('span')
+    aspectLabel.className = 'quote-aspect'
+    const aspectKey = typeof review.aspect === 'string' ? review.aspect : ''
+    const aspectName = aspectKey ? (t(`aspect${aspectKey.charAt(0).toUpperCase() + aspectKey.slice(1)}`) || aspectKey) : ''
+    aspectLabel.textContent = `${aspectName} (${review.rating ?? 0}\u2605)`
+    card.appendChild(aspectLabel)
+
+    const quote = document.createElement('p')
+    quote.className = 'quote-text'
+    const quoteText = typeof review.quote === 'string' ? review.quote : ''
+    const truncated = quoteText.length > 80 ? quoteText.substring(0, 80) + '...' : quoteText
+    quote.textContent = `\u201C${truncated}\u201D`
+    card.appendChild(quote)
+
+    container.appendChild(card)
+  }
+}
+
+let compareSelection: string[] = []
+
+function loadHistory() {
+  const listEl = el('history-list')
+  clearChildren(listEl)
+  compareSelection = []
+  const loadingText = document.createElement('p')
+  loadingText.className = 'history-msg'
+  loadingText.textContent = t('loading')
+  listEl.appendChild(loadingText)
+
+  chrome.runtime.sendMessage({ type: 'GET_HISTORY' }, (response) => {
+    clearChildren(listEl)
+    if (!response?.success) {
+      const err = document.createElement('p')
+      err.className = 'history-msg'
+      err.style.color = '#e53935'
+      err.textContent = t('networkError')
+      listEl.appendChild(err)
+      return
+    }
+    if (!response.data?.length) {
+      const empty = document.createElement('p')
+      empty.className = 'history-msg'
+      empty.textContent = t('historyEmpty')
+      listEl.appendChild(empty)
+      return
+    }
+
+    // 비교 버튼 (스크롤 영역 밖)
+    const compareBtn = document.createElement('button')
+    compareBtn.className = 'blur-cta'
+    compareBtn.style.cssText = 'width:100%;margin-bottom:8px;opacity:0.4;pointer-events:none'
+    compareBtn.textContent = t('compareButton')
+    compareBtn.addEventListener('click', () => {
+      if (compareSelection.length === 2) {
+        runCompare(compareSelection[0], compareSelection[1])
+      }
+    })
+    listEl.appendChild(compareBtn)
+
+    // 스크롤 가능한 항목 영역
+    const itemsEl = document.createElement('div')
+    itemsEl.id = 'history-items'
+    listEl.appendChild(itemsEl)
+
+    for (const item of response.data as Array<{ id: string; place_name: string; place_category: string; created_at: string; review_count: number }>) {
+      const row = document.createElement('div')
+      row.className = 'history-row'
+
+      // 비교 체크박스
+      const cb = document.createElement('input')
+      cb.type = 'checkbox'
+      cb.style.cssText = 'flex-shrink:0'
+      cb.addEventListener('change', () => {
+        if (cb.checked) {
+          if (compareSelection.length >= 2) {
+            cb.checked = false
+            return
+          }
+          compareSelection.push(item.id)
+        } else {
+          compareSelection = compareSelection.filter((id) => id !== item.id)
+        }
+        const enabled = compareSelection.length === 2
+        compareBtn.style.opacity = enabled ? '1' : '0.4'
+        compareBtn.style.pointerEvents = enabled ? 'auto' : 'none'
+      })
+      row.appendChild(cb)
+
+      const mid = document.createElement('div')
+      mid.style.cssText = 'flex:1;cursor:pointer'
+      mid.addEventListener('click', () => loadHistoryDetail(item.id))
+      const name = document.createElement('span')
+      name.className = 'history-name'
+      name.textContent = item.place_name
+      mid.appendChild(name)
+      if (item.place_category) {
+        const cat = document.createElement('span')
+        cat.className = 'history-cat'
+        cat.textContent = item.place_category
+        mid.appendChild(cat)
+      }
+      row.appendChild(mid)
+
+      const right = document.createElement('div')
+      right.className = 'history-date'
+      const d = new Date(item.created_at)
+      right.textContent = `${d.getMonth() + 1}/${d.getDate()} · ${item.review_count}`
+      row.appendChild(right)
+
+      itemsEl.appendChild(row)
+    }
+  })
+}
+
+function runCompare(id1: string, id2: string) {
+  const listEl = el('history-list')
+  clearChildren(listEl)
+  const loadingText = document.createElement('p')
+  loadingText.className = 'history-msg'
+  loadingText.textContent = t('loading')
+  listEl.appendChild(loadingText)
+
+  chrome.runtime.sendMessage({ type: 'COMPARE_PLACES', ids: [id1, id2] }, (response) => {
+    clearChildren(listEl)
+    if (!response?.success || !response.data) {
+      const err = document.createElement('p')
+      err.className = 'history-msg'
+      err.style.color = '#e53935'
+      err.textContent = response?.error || t('analysisFailed')
+      listEl.appendChild(err)
+      return
+    }
+
+    const { place1, place2 } = response.data as {
+      place1: { name: string; category: string; aspects: AspectData[]; reviewCount: number }
+      place2: { name: string; category: string; aspects: AspectData[]; reviewCount: number }
+    }
+
+    const grid = document.createElement('div')
+    grid.className = 'compare-grid'
+
+    for (const place of [place1, place2]) {
+      const col = document.createElement('div')
+      col.className = 'compare-col'
+
+      const nameEl = document.createElement('h3')
+      nameEl.className = 'compare-name'
+      nameEl.textContent = place.name
+      col.appendChild(nameEl)
+
+      if (place.category) {
+        const catEl = document.createElement('p')
+        catEl.className = 'compare-cat'
+        catEl.textContent = place.category
+        col.appendChild(catEl)
+      }
+
+      for (const a of place.aspects || []) {
+        const config = ASPECT_CONFIG[a.aspect] || { color: '#667eea', icon: '\u2B50' }
+        const aspectName = t(`aspect${a.aspect.charAt(0).toUpperCase() + a.aspect.slice(1)}`) || a.aspect
+
+        const row = document.createElement('div')
+        row.className = 'compare-aspect'
+        const label = document.createElement('span')
+        label.textContent = `${config.icon} ${aspectName}`
+        const score = document.createElement('strong')
+        score.style.color = config.color
+        score.textContent = a.score.toFixed(1)
+        row.appendChild(label)
+        row.appendChild(score)
+        col.appendChild(row)
+      }
+
+      grid.appendChild(col)
+    }
+
+    listEl.appendChild(grid)
+
+    // 목록으로 돌아가기 버튼
+    const backBtn = document.createElement('button')
+    backBtn.className = 'blur-cta'
+    backBtn.style.cssText = 'width:100%;margin-top:8px'
+    backBtn.textContent = t('backToList')
+    backBtn.addEventListener('click', loadHistory)
+    listEl.appendChild(backBtn)
+  })
+}
+
+function loadHistoryDetail(id: string) {
+  chrome.runtime.sendMessage({ type: 'GET_HISTORY_DETAIL', id }, (response) => {
+    if (!response?.success || !response.data) {
+      const listEl = el('history-list')
+      clearChildren(listEl)
+      const err = document.createElement('p')
+      err.className = 'history-msg'
+      err.style.color = '#e53935'
+      err.textContent = t('analysisFailed')
+      listEl.appendChild(err)
+      return
+    }
+    const item = response.data as { place_name: string; place_category: string; summary: AnalysisData; review_count: number }
+    const placeInfo = { name: item.place_name, category: item.place_category } as PlaceInfo
+    const summary = { ...item.summary, reviewCount: item.review_count } as AnalysisData
+    renderAnalysis(summary, placeInfo, true)
+  })
+}
+
 function showState(state: 'loading' | 'error' | 'result') {
   for (const s of ['loading', 'error', 'result']) {
     el(`state-${s}`).style.display = s === state ? 'block' : 'none'
@@ -447,19 +757,26 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
   el('place-name').textContent = placeInfo?.name || ''
   el('place-category').textContent = placeInfo?.category || ''
 
-  renderAspects(data.aspects || [])
-  renderList('highlights-list', 'highlights-section', data.highlights)
-  renderList('warnings-list', 'warnings-section', data.warnings)
+  renderAspects(data.aspects || [], isPro)
+  renderList('highlights-list', 'highlights-section', data.highlights, isPro, 2)
+  renderList('warnings-list', 'warnings-section', data.warnings, isPro, 1)
 
   const proSection = el('pro-section')
   const proGate = el('pro-gate')
 
-  if (isPro && (data.trend || data.waitTime || data.bestFor)) {
+  const hasProData = data.trend || data.waitTime || data.bestFor ||
+    data.topPicks?.length || data.avoid?.length || data.tips?.length || data.topReviews?.length
+
+  if (isPro && hasProData) {
     proSection.style.display = 'block'
     proGate.style.display = 'none'
     renderTrend(data.trend)
     renderWaitTime(data.waitTime)
     renderBestFor(data.bestFor)
+    renderProList('toppicks-container', t('topPicks'), data.topPicks, '#2e7d32')
+    renderProList('avoid-container', t('avoid'), data.avoid, '#e65100')
+    renderProList('tips-container', t('tips'), data.tips, '#1565c0')
+    renderTopReviews(data.topReviews)
   } else if (!isPro) {
     proSection.style.display = 'none'
     proGate.style.display = 'block'
@@ -467,6 +784,12 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
     proSection.style.display = 'none'
     proGate.style.display = 'none'
   }
+
+  // History button (Pro only) — 새 분석 시 접힌 상태로 리셋
+  el('history-section').style.display = isPro ? 'block' : 'none'
+  el('history-list').style.display = 'none'
+  clearChildren(el('history-list'))
+  el('history-btn').textContent = t('viewHistory')
 
   const langSection = el('lang-section')
   const langInfo = el('lang-info')

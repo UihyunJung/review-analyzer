@@ -1,5 +1,7 @@
 import { handleAnalyze } from './routes/analyze'
 import { handleUsage } from './routes/usage'
+import { handleHistory } from './routes/history'
+import { handleCompare } from './routes/compare'
 import { isRateLimited } from './lib/rate-limit'
 
 export interface Env {
@@ -81,6 +83,14 @@ export default {
         case '/usage':
           if (request.method !== 'GET') return errorResponse('Method not allowed', 405)
           return handleUsage(request, env, jsonResponse, errorResponse)
+
+        case '/history':
+          if (request.method !== 'GET') return errorResponse('Method not allowed', 405)
+          return handleHistory(request, env, jsonResponse, errorResponse)
+
+        case '/compare':
+          if (request.method !== 'POST') return errorResponse('Method not allowed', 405)
+          return handleCompare(request, env, jsonResponse, errorResponse)
 
         default:
           return errorResponse('Not found', 404)
