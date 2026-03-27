@@ -7,15 +7,14 @@
 <body>
   <div class="popup">
     <header class="popup-header">
-      <div class="header-row">
-        <div class="header-title">
-          <img src="icons/icon-48.png" alt="" class="header-icon">
-          <h1 data-i18n="title">Place Review Analyzer</h1>
-        </div>
-        <span id="status-badge" class="status-badge status-free" data-i18n="free">Free</span>
+      <div class="header-title">
+        <img src="icons/icon-48.png" alt="" class="header-icon">
+        <h1 data-i18n="title">Place Review Analyzer</h1>
       </div>
       <p class="subtitle" id="subtitle" data-i18n="subtitle">AI-powered restaurant insights</p>
-      <select id="lang-select" class="lang-select">
+      <div class="badge-lang-row">
+        <span id="status-badge" class="status-badge status-free" data-i18n="free">Free</span>
+        <select id="lang-select" class="lang-select">
         <option value="en">EN</option>
         <option value="ko">한국어</option>
         <option value="ja">日本語</option>
@@ -27,6 +26,7 @@
         <option value="pt-BR">Português</option>
         <option value="it">Italiano</option>
       </select>
+      </div>
     </header>
 
     <!-- 업그레이드 패널 (배지 클릭 시 토글, 기본 숨김) -->

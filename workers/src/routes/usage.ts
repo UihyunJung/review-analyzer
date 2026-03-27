@@ -1,7 +1,9 @@
 import type { Env } from '../index'
-import { supabaseQuery } from '../lib/supabase'
+import { supabaseQuery, supabaseRpc } from '../lib/supabase'
 import { extractIdentity } from '../lib/auth'
 import { checkPremium } from '../lib/premium'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function handleUsage(
   request: Request,
@@ -13,10 +15,19 @@ export async function handleUsage(
     const identity = extractIdentity(request)
     const today = new Date().toISOString().split('T')[0]
 
-    // Pro 체크 — Vercel /api/status (1분 캐시, refresh=true 시 캐시 무시)
     const url = new URL(request.url)
-    const skipCache = url.searchParams.get('refresh') === 'true'
     const installId = identity.deviceId
+
+    // 사용량 이관 (구매복원 시 이전 installId → 현재 installId)
+    const migrateFrom = url.searchParams.get('migrate')
+    if (migrateFrom && UUID_REGEX.test(migrateFrom) && migrateFrom !== installId) {
+      try {
+        await supabaseRpc(env, 'migrate_usage', { p_old_device_id: migrateFrom, p_new_device_id: installId })
+      } catch { /* 이관 실패해도 조회는 계속 */ }
+    }
+
+    // Pro 체크 — Vercel /api/status (1분 캐시, refresh=true 시 캐시 무시)
+    const skipCache = url.searchParams.get('refresh') === 'true'
     const isPro = await checkPremium(installId, env, skipCache)
     const limit = isPro ? parseInt(env.PRO_DAILY_LIMIT, 10) : parseInt(env.FREE_DAILY_LIMIT, 10)
 

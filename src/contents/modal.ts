@@ -247,6 +247,7 @@ function buildResultDOM(root: HTMLElement) {
   historySection.id = 'history-section'
   historySection.style.display = 'none'
   const historyBtn = document.createElement('button')
+  historyBtn.id = 'history-btn'
   historyBtn.className = 'blur-cta'
   historyBtn.style.cssText = 'width:100%;margin-bottom:8px'
   historyBtn.textContent = t('viewHistory')
@@ -784,8 +785,11 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
     proGate.style.display = 'none'
   }
 
-  // History button (Pro only)
+  // History button (Pro only) — 새 분석 시 접힌 상태로 리셋
   el('history-section').style.display = isPro ? 'block' : 'none'
+  el('history-list').style.display = 'none'
+  clearChildren(el('history-list'))
+  el('history-btn').textContent = t('viewHistory')
 
   const langSection = el('lang-section')
   const langInfo = el('lang-info')

@@ -209,8 +209,8 @@ function bindEvents() {
       if (result.restored) {
         isPremium = true
         updatePremiumUI()
-        // 사용량도 갱신 (Pro 한도 반영, 캐시 무시)
-        chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true }, (response) => {
+        // 사용량도 갱신 (Pro 한도 반영, 캐시 무시 + 이전 사용량 이관)
+        chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true, migrate: result.previousInstallId || null }, (response) => {
           if (response?.success && response.data) updateUsageUI(response.data)
         })
         showMessage(t('restoreSuccess'), 'success')

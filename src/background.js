@@ -67,7 +67,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.type === 'GET_USAGE') {
-    handleGetUsage(sendResponse, msg.refresh)
+    handleGetUsage(sendResponse, msg.refresh, msg.migrate)
     return true
   }
 
@@ -213,10 +213,14 @@ async function handleComparePlaces(ids, sendResponse) {
 }
 
 // === 사용량 핸들러 ===
-async function handleGetUsage(sendResponse, refresh = false) {
+async function handleGetUsage(sendResponse, refresh = false, migrate = null) {
   try {
     const installId = await ensureInstallId()
-    const url = refresh ? `${WORKERS_BASE}/usage?refresh=true` : `${WORKERS_BASE}/usage`
+    const params = new URLSearchParams()
+    if (refresh) params.set('refresh', 'true')
+    if (migrate) params.set('migrate', migrate)
+    const qs = params.toString()
+    const url = qs ? `${WORKERS_BASE}/usage?${qs}` : `${WORKERS_BASE}/usage`
     const res = await fetch(url, { headers: { 'X-Device-ID': installId } })
 
     if (res.ok) {

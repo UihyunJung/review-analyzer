@@ -21,8 +21,11 @@ const SELECTORS = {
   REVIEW_DATE: 'span.rsqaWe',
   REVIEW_LANG: '[lang]',
 
+  // 개요 탭 (장소 메타데이터 추출용)
+  OVERVIEW_TAB: '[role="tab"][aria-label*="Overview"], [role="tab"][aria-label*="개요"]',
   // 장소 메타데이터 (h1, aria-label — 안정적)
-  PLACE_NAME: 'h1',
+  PLACE_NAME: 'h1.DUwDvf',
+  PLACE_NAME_FALLBACK: 'h1',
   PLACE_CATEGORY: 'button.DkEaL',
   PLACE_RATING: '[aria-label*="\ubcc4\ud45c"], div.F7nice span[aria-hidden="true"]',
   PLACE_REVIEW_COUNT: '[aria-label*="\ub9ac\ubdf0"], span[aria-label*="review" i]',
@@ -133,11 +136,20 @@ function parseReviewElement(el: Element, index: number): Review | null {
 
 // --- 장소 메타데이터 추출 ---
 export function extractPlaceInfo(doc: Document, url: string): PlaceInfo {
+  // h1.DUwDvf 우선 (Sponsored 광고 h1 회피), 없으면 일반 h1
   let name = doc.querySelector(SELECTORS.PLACE_NAME)?.textContent?.trim() ?? ''
   if (!name) {
-    // fallback: 리뷰 탭 aria-label 전체 사용 (리뷰 탭에서 새로고침 시 h1 없음)
-    const reviewTab = doc.querySelector(SELECTORS.REVIEW_TAB)
-    name = reviewTab?.getAttribute('aria-label')?.trim() || 'Unknown Place'
+    name = doc.querySelector(SELECTORS.PLACE_NAME_FALLBACK)?.textContent?.trim() ?? ''
+  }
+
+  // 그래도 없거나 Sponsored이면 URL에서 추출
+  if (!name || name.toLowerCase() === 'sponsored' || name === '광고') {
+    const placeMatch = url.match(/\/place\/([^/@]+)/)
+    if (placeMatch) {
+      name = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '))
+    } else {
+      name = 'Unknown Place'
+    }
   }
   const category = doc.querySelector(SELECTORS.PLACE_CATEGORY)?.textContent?.trim() ?? ''
   const ratingText = doc.querySelector(SELECTORS.PLACE_RATING)?.textContent?.trim() ?? '0'
@@ -217,7 +229,12 @@ export async function extractGoogleMapsReviews(
   url: string,
   maxReviews: number = MAX_REVIEWS
 ): Promise<{ reviews: Review[]; placeInfo: PlaceInfo }> {
-  // 장소 메타데이터 (리뷰 탭 전환 전에 추출 — 리뷰 탭에서는 h1이 사라짐)
+  // Overview 탭으로 전환하여 장소 메타데이터 추출 (다른 탭에서는 h1/카테고리 사라짐)
+  const overviewTab = doc.querySelector(SELECTORS.OVERVIEW_TAB)
+  if (overviewTab && overviewTab instanceof HTMLElement && overviewTab.getAttribute('aria-selected') !== 'true') {
+    overviewTab.click()
+    await wait(500)
+  }
   const placeInfo = extractPlaceInfo(doc, url)
 
   // 리뷰 탭 클릭 → 스크롤 → 리뷰 로드
