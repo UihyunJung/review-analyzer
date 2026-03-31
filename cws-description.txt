@@ -1,0 +1,106 @@
+Stop scrolling through hundreds of reviews. Get AI-powered insights in seconds.
+
+Place Review Analyzer uses advanced AI to read up to 50 reviews on any Google Maps place and deliver a structured, easy-to-read summary — so you can make smarter decisions about where to eat, stay, or visit.
+
+
+⚡ HOW IT WORKS
+
+1️⃣ Open any place on Google Maps
+2️⃣ Click the "★ Analyze This Place" button
+3️⃣ Get a detailed breakdown in seconds
+
+
+🆓 WHAT YOU GET (FREE)
+
+📊 Aspect Scores
+Every place is scored across 4 key dimensions — Food, Service, Value, and Ambiance — each rated 0 to 10 with keyword tags and a short summary. No more guessing what reviewers really think.
+
+✅ Highlights
+The top 3 things people love about this place, pulled directly from real reviews.
+
+⚠️ Warnings
+The top 3 things to watch out for — issues that come up repeatedly in reviews.
+
+3 free analyses per day. No account required.
+
+
+⭐ PRO FEATURES
+
+Unlock the full picture with Pro:
+
+📈 Trend Analysis
+Is this place getting better or worse? See whether recent reviews show an improving, declining, or stable trend — and why.
+
+⏱️ Wait Time Estimate
+Know before you go. Get an estimated wait time based on what reviewers report.
+
+🎯 Best For
+Find out what this place is best suited for — date night, family dining, quick lunch, business meetings, and more.
+
+👍 Top Picks
+The most recommended items or experiences, straight from reviewer favorites.
+
+👎 Avoid
+Things reviewers suggest you skip — dishes, times, or situations to avoid.
+
+💡 Tips
+Insider advice from frequent visitors — best times to go, what to order, where to sit.
+
+💬 Review Highlights with Ratings
+See the most insightful quotes from reviews, organized by aspect and star rating.
+
+📋 Analysis History
+Access your past 20 analyses anytime. Revisit results without re-analyzing.
+
+🔄 Place Comparison
+Compare two places side by side across all aspects. Perfect for deciding between options.
+
+
+💎 WHY INSTALL PLACE REVIEW ANALYZER?
+
+⏰ Save Time
+Reading 50+ reviews takes 20-30 minutes. This extension gives you the same insights in under 10 seconds.
+
+🧠 Make Better Decisions
+Star ratings alone don't tell the full story. A 4.2-star restaurant might have amazing food but terrible service. Aspect scores reveal the details that matter to you.
+
+🌍 Works Everywhere
+Analyze any place on Google Maps — restaurants, cafes, hotels, attractions, shops, and more. Wherever there are reviews, this extension works.
+
+🔑 No Account Needed
+Just install and click. No sign-up, no login, no personal data collected.
+
+🤖 AI-Powered Accuracy
+Powered by Google Gemini AI, the analysis captures nuances that simple keyword counting misses — sarcasm, context, and overall sentiment.
+
+
+🌐 SUPPORTED LANGUAGES
+
+Analyze reviews and get results in 10 languages:
+English, Korean, Japanese, Chinese (Simplified), Chinese (Traditional), German, Spanish, French, Portuguese (Brazil), Italian
+
+
+🔒 PRIVACY
+
+Your privacy matters. This extension:
+• Does NOT collect personal information
+• Does NOT require an account or login
+• Does NOT track your browsing history
+• Only sends review text to our server when you click "Analyze"
+• Uses a random installation ID (not linked to your identity) for usage tracking
+
+Full privacy policy: https://paddle-extensions-backend.vercel.app/privacy-review-analyzer.html
+
+
+💰 PRICING
+
+🆓 Free: 3 analyses per day
+💳 Pro Monthly: $5.99/month
+💳 Pro Annual: $49.99/year (save 30%)
+
+Pro subscriptions are managed through Paddle. Cancel anytime.
+
+
+📮 SUPPORT
+
+Have questions or feedback? Visit our support page or leave a review — we read every one.
