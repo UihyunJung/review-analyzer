@@ -175,6 +175,7 @@ function buildResultDOM(root: HTMLElement) {
   const aspectSection = document.createElement('section')
   aspectSection.className = 'section'
   const aspectTitle = document.createElement('h2')
+  aspectTitle.className = 'section-title-main'
   aspectTitle.textContent = t('aspectScores')
   aspectSection.appendChild(aspectTitle)
   const aspectContainer = document.createElement('div')
@@ -182,42 +183,44 @@ function buildResultDOM(root: HTMLElement) {
   aspectSection.appendChild(aspectContainer)
   root.appendChild(aspectSection)
 
-  // Highlights
-  const hlSection = document.createElement('section')
-  hlSection.className = 'section'
-  hlSection.id = 'highlights-section'
-  hlSection.style.display = 'none'
-  const hlTitle = document.createElement('h2')
-  hlTitle.textContent = t('highlights')
-  hlSection.appendChild(hlTitle)
-  const hlList = document.createElement('ul')
-  hlList.id = 'highlights-list'
-  hlList.className = 'result-list highlights'
-  hlSection.appendChild(hlList)
-  root.appendChild(hlSection)
-
-  // Warnings
-  const warnSection = document.createElement('section')
-  warnSection.className = 'section'
-  warnSection.id = 'warnings-section'
-  warnSection.style.display = 'none'
-  const warnTitle = document.createElement('h2')
-  warnTitle.textContent = t('watchOut')
-  warnSection.appendChild(warnTitle)
-  const warnList = document.createElement('ul')
-  warnList.id = 'warnings-list'
-  warnList.className = 'result-list warnings'
-  warnSection.appendChild(warnList)
-  root.appendChild(warnSection)
-
-  // Pro section
+  // Pro Insights section (includes highlights, warnings, and all pro features)
   const proSection = document.createElement('section')
   proSection.className = 'section'
   proSection.id = 'pro-section'
   proSection.style.display = 'none'
   const proTitle = document.createElement('h2')
+  proTitle.className = 'section-title-main'
   proTitle.textContent = t('proInsights')
   proSection.appendChild(proTitle)
+
+  // Highlights (inside pro section)
+  const hlSub = document.createElement('div')
+  hlSub.id = 'highlights-section'
+  hlSub.style.display = 'none'
+  const hlTitle = document.createElement('h3')
+  hlTitle.style.color = '#2e7d32'
+  hlTitle.textContent = t('highlights')
+  hlSub.appendChild(hlTitle)
+  const hlList = document.createElement('ul')
+  hlList.id = 'highlights-list'
+  hlList.className = 'result-list highlights'
+  hlSub.appendChild(hlList)
+  proSection.appendChild(hlSub)
+
+  // Warnings (inside pro section)
+  const warnSub = document.createElement('div')
+  warnSub.id = 'warnings-section'
+  warnSub.style.display = 'none'
+  const warnTitle = document.createElement('h3')
+  warnTitle.style.color = '#e65100'
+  warnTitle.textContent = t('watchOut')
+  warnSub.appendChild(warnTitle)
+  const warnList = document.createElement('ul')
+  warnList.id = 'warnings-list'
+  warnList.className = 'result-list warnings'
+  warnSub.appendChild(warnList)
+  proSection.appendChild(warnSub)
+
   const trendContainer = document.createElement('div')
   trendContainer.id = 'trend-container'
   proSection.appendChild(trendContainer)
@@ -274,9 +277,31 @@ function buildResultDOM(root: HTMLElement) {
   proGate.id = 'pro-gate'
   proGate.className = 'pro-gate'
   proGate.style.display = 'none'
+
+  const lockIcon = document.createElement('div')
+  lockIcon.className = 'pro-gate-lock'
+  lockIcon.textContent = '\uD83D\uDD12'
+  proGate.appendChild(lockIcon)
+
+  const proGateTitle = document.createElement('h2')
+  proGateTitle.className = 'section-title-main'
+  proGateTitle.textContent = t('proInsights')
+  proGate.appendChild(proGateTitle)
+
   const proGateText = document.createElement('p')
   proGateText.textContent = t('proGateText')
   proGate.appendChild(proGateText)
+
+  const featureList = document.createElement('ul')
+  featureList.className = 'pro-gate-features'
+  const features = ['highlights', 'watchOut', 'trendTitle', 'bestFor', 'topPicks', 'avoid', 'tips', 'topReviews', 'viewHistory', 'compareButton']
+  for (const key of features) {
+    const li = document.createElement('li')
+    li.textContent = t(key)
+    featureList.appendChild(li)
+  }
+  proGate.appendChild(featureList)
+
   const proGateBtns = document.createElement('div')
   proGateBtns.style.cssText = 'display:flex;gap:8px;justify-content:center'
   const proMonthlyBtn = document.createElement('button')
@@ -363,14 +388,14 @@ function renderAspects(aspects: AspectData[], isPro: boolean) {
     barBg.appendChild(barFill)
 
     const summary = document.createElement('p')
-    summary.className = isPro ? 'aspect-summary' : 'aspect-summary blurred'
+    summary.className = 'aspect-summary'
     summary.textContent = a.summary
 
     card.appendChild(header)
     card.appendChild(barBg)
     card.appendChild(summary)
 
-    if (isPro && a.keywords?.length) {
+    if (a.keywords?.length) {
       const tags = document.createElement('div')
       tags.className = 'aspect-keywords'
       for (const kw of a.keywords) {
@@ -427,9 +452,8 @@ function renderTrend(trend: TrendData | undefined) {
   }
   const c = trendConfig[trend.direction] || trendConfig.stable
 
-  const title = document.createElement('p')
-  title.className = 'pro-list-label'
-  title.style.color = '#333'
+  const title = document.createElement('h3')
+  title.style.color = '#6a1b9a'
   title.textContent = t('trendTitle')
   container.appendChild(title)
 
@@ -487,8 +511,8 @@ function renderBestFor(tags: string[] | undefined) {
   clearChildren(container)
   if (!tags?.length) return
 
-  const labelEl = document.createElement('p')
-  labelEl.style.cssText = 'font-size:13px;font-weight:600;color:#333;margin-bottom:6px'
+  const labelEl = document.createElement('h3')
+  labelEl.style.color = '#1565c0'
   labelEl.textContent = t('bestFor')
   container.appendChild(labelEl)
   const tagsDiv = document.createElement('div')
@@ -507,8 +531,7 @@ function renderProList(containerId: string, label: string, items: string[] | und
   clearChildren(container)
   if (!items?.length) return
 
-  const labelEl = document.createElement('p')
-  labelEl.className = 'pro-list-label'
+  const labelEl = document.createElement('h3')
   labelEl.style.color = color
   labelEl.textContent = label
   container.appendChild(labelEl)
@@ -528,9 +551,8 @@ function renderTopReviews(reviews: TopReviewData[] | undefined) {
   clearChildren(container)
   if (!reviews?.length) return
 
-  const label = document.createElement('p')
-  label.className = 'pro-list-label'
-  label.style.color = '#333'
+  const label = document.createElement('h3')
+  label.style.color = '#667eea'
   label.textContent = t('topReviews')
   container.appendChild(label)
 
@@ -758,18 +780,15 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
   el('place-category').textContent = placeInfo?.category || ''
 
   renderAspects(data.aspects || [], isPro)
-  renderList('highlights-list', 'highlights-section', data.highlights, isPro, 2)
-  renderList('warnings-list', 'warnings-section', data.warnings, isPro, 1)
 
   const proSection = el('pro-section')
   const proGate = el('pro-gate')
 
-  const hasProData = data.trend || data.waitTime || data.bestFor ||
-    data.topPicks?.length || data.avoid?.length || data.tips?.length || data.topReviews?.length
-
-  if (isPro && hasProData) {
+  if (isPro) {
     proSection.style.display = 'block'
     proGate.style.display = 'none'
+    renderList('highlights-list', 'highlights-section', data.highlights, true)
+    renderList('warnings-list', 'warnings-section', data.warnings, true)
     renderTrend(data.trend)
     renderWaitTime(data.waitTime)
     renderBestFor(data.bestFor)
@@ -777,12 +796,9 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
     renderProList('avoid-container', t('avoid'), data.avoid, '#e65100')
     renderProList('tips-container', t('tips'), data.tips, '#1565c0')
     renderTopReviews(data.topReviews)
-  } else if (!isPro) {
-    proSection.style.display = 'none'
-    proGate.style.display = 'block'
   } else {
     proSection.style.display = 'none'
-    proGate.style.display = 'none'
+    proGate.style.display = 'block'
   }
 
   // History button (Pro only) — 새 분석 시 접힌 상태로 리셋

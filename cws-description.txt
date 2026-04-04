@@ -5,28 +5,27 @@ Place Review Analyzer uses advanced AI to read up to 50 reviews on any Google Ma
 
 ⚡ HOW IT WORKS
 
-1️⃣ Open any place on Google Maps
+1️⃣ Select a place on Google Maps
 2️⃣ Click the "★ Analyze This Place" button
 3️⃣ Get a detailed breakdown in seconds
 
 
-🆓 WHAT YOU GET (FREE)
+📊 ASPECT SCORES
 
-📊 Aspect Scores
 Every place is scored across 4 key dimensions — Food, Service, Value, and Ambiance — each rated 0 to 10 with keyword tags and a short summary. No more guessing what reviewers really think.
 
-✅ Highlights
-The top 3 things people love about this place, pulled directly from real reviews.
-
-⚠️ Warnings
-The top 3 things to watch out for — issues that come up repeatedly in reviews.
-
-3 free analyses per day. No account required.
+3 analyses per day. No account required.
 
 
-⭐ PRO FEATURES
+⭐ PRO INSIGHTS
 
 Unlock the full picture with Pro:
+
+✅ Highlights
+The top things people love about this place, pulled directly from real reviews.
+
+⚠️ Watch Out
+Things to watch out for — issues that come up repeatedly in reviews.
 
 📈 Trend Analysis
 Is this place getting better or worse? See whether recent reviews show an improving, declining, or stable trend — and why.
@@ -94,7 +93,7 @@ Full privacy policy: https://paddle-extensions-backend.vercel.app/privacy-review
 
 💰 PRICING
 
-🆓 Free: 3 analyses per day
+✨ 3 analyses per day
 💳 Pro Monthly: $5.99/month
 💳 Pro Annual: $49.99/year (save 30%)
 

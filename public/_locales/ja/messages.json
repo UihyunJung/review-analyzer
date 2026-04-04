@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Place Review Analyzer for Google Maps" },
-  "extDescription": { "message": "Google MapsのAIレビュー分析。場所ページで右下の★ボタンをクリックすると、評価スコア、ハイライト、注意点を即座に確認できます。" }
+  "extDescription": { "message": "Google MapsのAIレビュー分析。場所ページで★この場所を分析ボタンをクリックすると、評価スコアとAIインサイトを確認できます。" }
 }

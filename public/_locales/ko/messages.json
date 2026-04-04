@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Google Maps 장소 리뷰 분석기" },
-  "extDescription": { "message": "Google Maps AI 리뷰 분석. 장소 페이지에서 오른쪽 하단 ★ 버튼을 클릭하면 측면별 점수, 장점, 주의사항을 즉시 확인할 수 있습니다." }
+  "extDescription": { "message": "Google Maps AI 리뷰 분석. 장소 페이지에서 ★ 리뷰 분석하기 버튼을 클릭하면 측면별 점수와 AI 인사이트를 즉시 확인할 수 있습니다." }
 }

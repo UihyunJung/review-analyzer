@@ -67,8 +67,8 @@
 ## v0.3.0 변경 요약
 - 가격: $3.99→$5.99/mo, $29.99→$49.99/yr
 - 한도: Free 5→3회/일, Pro 100→50회/일
-- Paywall 블러: Free에서 Aspect 요약/키워드 블러, Highlights 2개·Warnings 1개만
-- Pro 기능: Top Picks, Avoid, Tips, 리뷰 인용, 히스토리, 장소 비교
+- Free: Aspect Scores만 (블러 없음, summary + keywords 전부 표시)
+- Pro Insights: Highlights, Watch Out, Trend, Best For, Top Picks, Avoid, Tips, Review Highlights, 히스토리, 장소 비교
 - Gemini API: Vercel 프록시 경유 (HKG 차단 대응)
 - 스크래퍼: Overview 탭 전환 → Sponsored h1 회피
 - 구매복원 시 사용량 이관 (previousInstallId)

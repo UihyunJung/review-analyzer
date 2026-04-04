@@ -1,6 +1,11 @@
 # Place Review Analyzer
 
-Google Maps/네이버 Place 식당·장소 리뷰를 AI로 측면별(Food, Service, Value, Ambiance) 분석하는 크롬 확장.
+Google Maps 장소 리뷰를 AI로 측면별(Food, Service, Value, Ambiance) 분석하는 크롬 확장.
+
+## Free / Pro 구분
+
+- **Free**: Aspect Scores만 표시 (블러 없음, summary + keywords 전부)
+- **Pro Insights**: Highlights, Watch Out, Trend, Wait Time, Best For, Top Picks, Avoid, Tips, Review Highlights, History, Compare
 
 ## 빌드/테스트/린트
 

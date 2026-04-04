@@ -1,4 +1,4 @@
 {
   "extName": { "message": "Google Maps 場所評論分析器" },
-  "extDescription": { "message": "Google Maps AI評論分析。在場所頁面點擊右下角★按鈕，即可獲取評分、亮點和注意事項。" }
+  "extDescription": { "message": "Google Maps AI評論分析。在場所頁面點擊★分析此場所按鈕，即可獲取評分和AI洞察。" }
 }

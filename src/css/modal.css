@@ -98,6 +98,9 @@ h1 { font-size: 18px; font-weight: 700; margin: 0; }
 .category { font-size: 12px; color: #666; margin: 2px 0 0; }
 .section { margin-bottom: 16px; }
 .section h2 { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #333; }
+.section h2.section-title-main { font-size: 18px; font-weight: 700; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 2px solid #667eea; }
+#pro-section > div { margin-bottom: 20px; }
+#pro-section > #trend-container { margin-bottom: 12px; }
 
 /* Aspect Card */
 .aspect-card { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
@@ -137,14 +140,19 @@ h1 { font-size: 18px; font-weight: 700; margin: 0; }
 .bestfor-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .bestfor-tag { background: #e3f2fd; color: #1565c0; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
 
+/* Pro sub-section titles (highlights, watch out, trend, etc.) */
+#pro-section h3 { font-size: 14px; font-weight: 600; color: #333; margin: 0 0 6px; padding-left: 10px; border-left: 3px solid currentColor; }
+
 /* Pro gate */
-.pro-gate { background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%); border: 1px dashed #667eea; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 16px; }
-.pro-gate p { font-size: 13px; color: #555; margin: 0 0 8px; }
+.pro-gate { background: linear-gradient(135deg, #667eea11 0%, #764ba211 100%); border: 1px solid #667eea44; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 16px; }
+.pro-gate-lock { font-size: 28px; margin-bottom: 8px; }
+.pro-gate p { font-size: 13px; color: #555; margin: 0 0 12px; }
+.pro-gate-features { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pro-gate-features li { font-size: 11px; color: #667eea; background: #667eea11; border: 1px solid #667eea33; border-radius: 12px; padding: 3px 10px; }
 .pro-gate-btn { background: #667eea; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .pro-gate-btn:hover { opacity: 0.9; }
 
-/* Blur paywall */
-.blurred { filter: blur(4px); pointer-events: none; user-select: none; }
+/* Utility buttons */
 .blur-cta { display: block; text-align: center; margin-top: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: #667eea; cursor: pointer; background: none; border: 1px solid #667eea; border-radius: 6px; }
 .blur-cta:hover { background: #667eea11; }
 
