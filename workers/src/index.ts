@@ -49,6 +49,11 @@ function makeErrorResponse(origin: string) {
     makeJsonResponse(origin)({ success: false, error: message }, status)
 }
 
+function makeErrorCodeResponse(origin: string) {
+  return (errorCode: string, status: number): Response =>
+    makeJsonResponse(origin)({ success: false, errorCode }, status)
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
@@ -64,10 +69,11 @@ export default {
 
     const jsonResponse = makeJsonResponse(origin)
     const errorResponse = makeErrorResponse(origin)
+    const errorCodeResponse = makeErrorCodeResponse(origin)
 
     const clientIp = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     if (isRateLimited(clientIp)) {
-      return errorResponse('Too many requests', 429)
+      return errorCodeResponse('WORKERS_RATE_LIMIT', 429)
     }
 
     if (request.method === 'OPTIONS') {
@@ -78,7 +84,7 @@ export default {
       switch (path) {
         case '/analyze':
           if (request.method !== 'POST') return errorResponse('Method not allowed', 405)
-          return handleAnalyze(request, env, jsonResponse, errorResponse)
+          return handleAnalyze(request, env, jsonResponse, errorResponse, errorCodeResponse)
 
         case '/usage':
           if (request.method !== 'GET') return errorResponse('Method not allowed', 405)

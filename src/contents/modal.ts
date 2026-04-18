@@ -906,11 +906,14 @@ export function showLoading() {
   startProgress(0, 40, 8000)
 }
 
-export function setLoadingStage(stage: 'analyzing') {
+export function setLoadingStage(stage: 'analyzing' | 'retrying') {
   if (stage === 'analyzing') {
     // 단계2: AI 분석 (현재값→90%, 12초 예상, 90%에서 극도로 느려짐)
     el('progress-stage').textContent = t('loadingAnalyzing')
     startProgress(progressValue, 90, 12000)
+  } else if (stage === 'retrying') {
+    // 재시도 중 — 텍스트만 갱신, progress 애니메이션은 현재 값 유지 (심리적 활성도)
+    el('progress-stage').textContent = t('loadingRetrying')
   }
 }
 
@@ -926,12 +929,30 @@ export function showResult(data: AnalysisData, placeInfo: PlaceInfo, isPro: bool
   }, 300)
 }
 
-export function showError(msg: string) {
+// 재시도 핸들러 주입 (google-maps-review.ts가 triggerRetry를 주입)
+let retryHandler: (() => void) | null = null
+export function setRetryHandler(fn: (() => void) | null) {
+  retryHandler = fn
+}
+
+export function showError(msg: string, opts?: { showRetry?: boolean }) {
   stopProgress()
   showModal()
   showState('error')
   const errorEl = el('state-error')
-  errorEl.textContent = msg
+  errorEl.textContent = ''
+  const p = document.createElement('p')
+  p.textContent = msg
+  errorEl.appendChild(p)
+  if (opts?.showRetry && retryHandler) {
+    const btn = document.createElement('button')
+    btn.textContent = t('retryButton')
+    btn.setAttribute('aria-label', t('retryButton'))
+    btn.style.cssText =
+      'margin-top:12px;padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600'
+    btn.addEventListener('click', () => retryHandler?.())
+    errorEl.appendChild(btn)
+  }
 }
 
 export function showExceeded() {

@@ -1,7 +1,37 @@
 import { extractGoogleMapsReviews } from '../lib/scrapers/google-maps'
+import { extractPlaceId } from '../lib/scrapers/google-maps'
 import { getDefaultLanguage, setLanguage, t } from '../js/i18n.js'
 import { STORAGE_KEYS } from '../js/config.js'
-import { showLoading, setLoadingStage, showResult, showError, showExceeded, hideModal, hasResult, toggleModal, clearResult } from './modal'
+import { showLoading, setLoadingStage, showResult, showError, showExceeded, hideModal, hasResult, toggleModal, clearResult, setRetryHandler } from './modal'
+import { getErrorMessageKey } from './error-message-key'
+
+// 응답 타입 (background.js와 계약)
+type AnalyzeResponse = {
+  success?: boolean
+  data?: { isPro?: boolean } & Record<string, unknown>
+  exceeded?: boolean
+  errorCode?: string
+}
+
+// 재시도 버튼 클릭시 사용할 btn 참조 + placeId (SPA navigation 안전성)
+let lastAnalyzeBtn: HTMLButtonElement | null = null
+let lastAnalyzePlaceId: string | null = null
+
+// 재시도 핸들러: modal.ts의 retry 버튼이 호출
+async function triggerRetry() {
+  if (!lastAnalyzeBtn) return
+  // SPA navigation으로 장소가 바뀌었는지 확인
+  const current = extractPlaceId(window.location.href, document)
+  if (lastAnalyzePlaceId && current && current !== lastAnalyzePlaceId) {
+    hideModal()
+    return
+  }
+  // DOM에서 btn이 여전히 존재하는지
+  if (!document.contains(lastAnalyzeBtn)) return
+  resetButton(lastAnalyzeBtn)
+  handleAnalyzeClick(lastAnalyzeBtn)
+}
+setRetryHandler(triggerRetry)
 
 // 저장된 언어 복원 (비동기)
 let currentLang = getDefaultLanguage()
@@ -81,7 +111,7 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
   const usageCheck = await new Promise<{ success?: boolean; data?: { remaining: number } }>((resolve) => {
     chrome.runtime.sendMessage({ type: 'GET_USAGE' }, resolve)
   })
-  if (usageCheck?.success && usageCheck.data?.remaining <= 0) {
+  if (usageCheck?.success && usageCheck.data?.remaining !== undefined && usageCheck.data.remaining <= 0) {
     exceeded = true
     btn.textContent = t('upgradeButton')
     btn.style.background = '#ff9800'
@@ -94,9 +124,11 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
   btn.style.opacity = '0.8'
 
   showLoading()
+  lastAnalyzeBtn = btn
 
   try {
     const { reviews, placeInfo } = await extractGoogleMapsReviews(document, window.location.href)
+    lastAnalyzePlaceId = placeInfo?.placeId ?? null
 
     if (reviews.length === 0) {
       loading = false
@@ -109,30 +141,79 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
 
     setLoadingStage('analyzing')
 
-    chrome.runtime.sendMessage(
-      { type: 'ANALYZE_PLACE', reviews, placeInfo, site: 'google_maps', lang: currentLang },
-      (response) => {
-        loading = false
-        if (response?.success) {
-          btn.textContent = '\u2713 ' + t('doneButton')
-          btn.style.background = '#43a047'
-          const isPro = response.data?.isPro || false
-          showResult(response.data, placeInfo, isPro)
-          toggleBtn.style.display = ''
-          setTimeout(() => resetButton(btn), 3000)
-        } else if (response?.exceeded) {
-          exceeded = true
-          btn.textContent = t('upgradeButton')
-          btn.style.background = '#ff9800'
-          showExceeded()
-        } else {
-          btn.textContent = t('analysisFailed')
-          btn.style.background = '#e53935'
-          showError(t('analysisFailed'))
-          setTimeout(() => resetButton(btn), 5000)
+    // 503/GEMINI_ERROR 자동 재시도 루프 (최대 1회 재시도)
+    for (let attempt = 0; attempt <= 1; attempt++) {
+      if (attempt > 0) {
+        setLoadingStage('retrying')
+        await new Promise((r) => setTimeout(r, 2000))
+        // SPA navigation으로 장소가 바뀌었는지 재확인
+        const currentPlaceId = extractPlaceId(window.location.href, document)
+        if (lastAnalyzePlaceId && currentPlaceId && currentPlaceId !== lastAnalyzePlaceId) {
+          hideModal()
+          loading = false
+          resetButton(btn)
+          return
         }
       }
-    )
+
+      // chrome.runtime.lastError 명시적 체크 (MV3 SW suspend 대응)
+      const response = await new Promise<AnalyzeResponse | undefined>((resolve) => {
+        chrome.runtime.sendMessage(
+          {
+            type: 'ANALYZE_PLACE',
+            reviews,
+            placeInfo,
+            site: 'google_maps',
+            lang: currentLang,
+            isFinalAttempt: attempt === 1
+          },
+          (resp: AnalyzeResponse | undefined) => {
+            if (chrome.runtime.lastError) {
+              console.warn('[sendMessage]', chrome.runtime.lastError.message)
+              resolve(undefined)
+              return
+            }
+            resolve(resp)
+          }
+        )
+      })
+
+      loading = false
+
+      if (response?.success) {
+        btn.textContent = '\u2713 ' + t('doneButton')
+        btn.style.background = '#43a047'
+        const isPro = response.data?.isPro || false
+        showResult(response.data as never, placeInfo, isPro)
+        toggleBtn.style.display = ''
+        setTimeout(() => resetButton(btn), 3000)
+        return
+      }
+
+      if (response?.exceeded) {
+        exceeded = true
+        btn.textContent = t('upgradeButton')
+        btn.style.background = '#ff9800'
+        showExceeded()
+        return
+      }
+
+      const code = response?.errorCode
+      const retryableCodes = ['GEMINI_OVERLOADED', 'GEMINI_ERROR']
+      if (attempt === 0 && code !== undefined && retryableCodes.includes(code)) {
+        loading = true
+        continue
+      }
+
+      // 최종 실패
+      const showRetryBtn =
+        code !== undefined && ['GEMINI_OVERLOADED', 'GEMINI_ERROR', 'NETWORK_ERROR'].includes(code)
+      btn.textContent = t('analysisFailed')
+      btn.style.background = '#e53935'
+      showError(t(getErrorMessageKey(code)), { showRetry: showRetryBtn })
+      setTimeout(() => resetButton(btn), 5000)
+      return
+    }
   } catch {
     loading = false
     btn.textContent = t('analysisFailed')

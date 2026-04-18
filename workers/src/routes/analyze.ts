@@ -1,5 +1,6 @@
 import type { Env } from '../index'
-import { callGemini } from '../lib/gemini'
+import { callGemini, GeminiError } from '../lib/gemini'
+import { geminiStatusToErrorCode } from '../lib/error-mapping'
 import { supabaseRpc, supabaseQuery } from '../lib/supabase'
 import {
   validateRequestSize,
@@ -9,6 +10,14 @@ import {
 } from '../lib/validate'
 import { extractIdentity, AuthError } from '../lib/auth'
 import { checkPremium } from '../lib/premium'
+
+// 응답 스키마:
+// 성공:     { success: true, data: {...} }
+// 한도초과:  { success: false, exceeded: true, error: string }  — errorCode 없음, 기존 402 플로우 유지
+// Gemini:   { success: false, errorCode: 'GEMINI_OVERLOADED' | 'GEMINI_RATE_LIMIT' | 'GEMINI_NOT_FOUND' | 'GEMINI_ERROR' }
+// 파싱실패: { success: false, errorCode: 'PARSE_FAILED' }
+// 기타:     { success: false, error: string }  — validation/auth 등 (errorCode 없음)
+// 상호배타: exceeded와 errorCode는 동시 존재 불가
 
 const MAX_REVIEWS = 50
 const MAX_REVIEW_LENGTH = 500
@@ -35,10 +44,16 @@ interface AnalyzeBody {
 }
 
 const LANG_NAMES: Record<string, string> = {
-  en: 'English', ko: '한국어', ja: '日本語',
-  'zh-CN': '简体中文', 'zh-TW': '繁體中文',
-  de: 'Deutsch', es: 'Español', fr: 'Français',
-  'pt-BR': 'Português', it: 'Italiano'
+  en: 'English',
+  ko: '한국어',
+  ja: '日本語',
+  'zh-CN': '简体中文',
+  'zh-TW': '繁體中文',
+  de: 'Deutsch',
+  es: 'Español',
+  fr: 'Français',
+  'pt-BR': 'Português',
+  it: 'Italiano'
 }
 
 function buildSystemPrompt(category: string, site: string, lang: string): string {
@@ -71,7 +86,9 @@ Be concise. Each summary should be 1-2 sentences max.`
 function buildProSystemPrompt(category: string, site: string, lang: string): string {
   const langName = LANG_NAMES[lang] || 'English'
   const base = buildSystemPrompt(category, site, lang)
-  return base + `
+  return (
+    base +
+    `
 
 Also include these additional fields in the JSON (keys in English, values in ${langName}):
 "trend": { "recentSentiment": "positive|negative|mixed", "previousSentiment": "positive|negative|mixed", "direction": "improving|declining|stable", "reason": "reason in ${langName}" },
@@ -85,12 +102,11 @@ For topPicks/avoid/tips: adapt to the place category (e.g. menu items for restau
 For topReviews: select 2-4 representative quotes, one per aspect. Each quote must be max 80 characters.
 If fewer than 3 reviews mention wait times, return estimate as "insufficient data".
 If data is insufficient for a field, return an empty array.`
+  )
 }
 
 function buildUserMessage(reviews: Review[]): string {
-  const reviewTexts = reviews
-    .map((r, i) => `[${i + 1}] (${r.rating}★) ${r.text}`)
-    .join('\n')
+  const reviewTexts = reviews.map((r, i) => `[${i + 1}] (${r.rating}★) ${r.text}`).join('\n')
   return `Analyze these ${reviews.length} reviews:\n\n${reviewTexts}`
 }
 
@@ -107,7 +123,8 @@ export async function handleAnalyze(
   request: Request,
   env: Env,
   jsonResponse: (data: unknown, status?: number) => Response,
-  errorResponse: (message: string, status: number) => Response
+  errorResponse: (message: string, status: number) => Response,
+  errorCodeResponse: (errorCode: string, status: number) => Response
 ): Promise<Response> {
   try {
     // 1. 인증: X-Device-ID → installId
@@ -140,7 +157,7 @@ export async function handleAnalyze(
     const isPro = await checkPremium(installId, env)
     const placeId = body.placeInfo?.placeId ?? ''
     const site = body.site ?? 'google_maps'
-    const lang = LANG_NAMES[body.lang || 'en'] ? (body.lang || 'en') : 'en'
+    const lang = LANG_NAMES[body.lang || 'en'] ? body.lang || 'en' : 'en'
 
     // 5. 캐시 확인 — 같은 place_id + site + lang + isPro의 24시간 이내 분석 결과 재사용
     let cachedSummary: Record<string, unknown> | null = null
@@ -208,7 +225,10 @@ export async function handleAnalyze(
         } catch {
           console.error('[Rollback failed]', err)
         }
-        return errorResponse('AI service temporarily unavailable', 502)
+        if (err instanceof GeminiError) {
+          return errorCodeResponse(geminiStatusToErrorCode(err.status), err.status)
+        }
+        return errorCodeResponse('GEMINI_ERROR', 502)
       }
 
       // 8. JSON 파싱
@@ -221,12 +241,20 @@ export async function handleAnalyze(
           try {
             analysisResult = JSON.parse(jsonMatch[0])
           } catch {
-            try { await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId }) } catch { /* ignore */ }
-            return errorResponse('Failed to parse AI response', 502)
+            try {
+              await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId })
+            } catch {
+              /* ignore */
+            }
+            return errorCodeResponse('PARSE_FAILED', 502)
           }
         } else {
-          try { await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId }) } catch { /* ignore */ }
-          return errorResponse('Failed to parse AI response', 502)
+          try {
+            await supabaseRpc(env, 'decrement_usage', { p_device_id: identity.deviceId })
+          } catch {
+            /* ignore */
+          }
+          return errorCodeResponse('PARSE_FAILED', 502)
         }
       }
 

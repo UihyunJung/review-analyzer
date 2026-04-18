@@ -1,7 +1,7 @@
 {
   "name": "review-analyzer",
   "displayName": "Place Review Analyzer",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "AI-powered restaurant & place review insights for Google Maps",
   "type": "module",
   "private": true,
@@ -16,6 +16,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260418.1",
     "@types/chrome": "^0.0.287",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

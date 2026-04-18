@@ -8,3 +8,4 @@ dist/
 .wrangler-tmp/
 .playwright-mcp/
 *.stackdump
+*.zip

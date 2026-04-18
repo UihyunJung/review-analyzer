@@ -144,12 +144,19 @@ async function handleAnalyze(request, sendResponse) {
       : {
           success: false,
           error: result.error || `Server error ${res.status}`,
-          exceeded: result.exceeded || false
+          exceeded: result.exceeded || false,
+          errorCode: result.errorCode
         }
 
-    // storage에 저장 (페이지 새로고침 후 참조용)
-    const storedResult = { ...response, placeInfo: request.placeInfo, timestamp: Date.now() }
-    await chrome.storage.local.set({ [STORAGE_KEYS.LAST_ANALYSIS]: storedResult })
+    // (H1) 재시도 가능 에러(GEMINI_OVERLOADED/GEMINI_ERROR)의 중간 실패는 storage 저장 스킵
+    // content script가 전달한 isFinalAttempt 플래그로 최종 여부 판단
+    const isFinalAttempt = request.isFinalAttempt ?? true
+    const retryableCodes = ['GEMINI_OVERLOADED', 'GEMINI_ERROR']
+    const skipStorage = !response.success && retryableCodes.includes(response.errorCode) && !isFinalAttempt
+    if (!skipStorage) {
+      const storedResult = { ...response, placeInfo: request.placeInfo, timestamp: Date.now() }
+      await chrome.storage.local.set({ [STORAGE_KEYS.LAST_ANALYSIS]: storedResult })
+    }
 
     // 분석 후 사용량 캐시 갱신 (popup에서 즉시 반영)
     try {
@@ -162,7 +169,7 @@ async function handleAnalyze(request, sendResponse) {
 
     sendResponse(response)
   } catch (error) {
-    sendResponse({ success: false, error: error.message || 'Unknown error' })
+    sendResponse({ success: false, error: error.message || 'Unknown error', errorCode: 'NETWORK_ERROR' })
   }
 }
 
