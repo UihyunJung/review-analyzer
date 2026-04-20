@@ -7,7 +7,7 @@ mode = "smart"
 
 # Production (default: `wrangler deploy`)
 [vars]
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 PROMPT_VERSION = "v2"
 FREE_DAILY_LIMIT = "3"
 PRO_DAILY_LIMIT = "50"
@@ -17,7 +17,7 @@ PADDLE_BACKEND_URL = "https://paddle-extensions-backend.vercel.app"
 [env.dev]
 name = "place-review-api-dev"
 [env.dev.vars]
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-2.5-flash-lite"
 PROMPT_VERSION = "v2"
 FREE_DAILY_LIMIT = "3"
 PRO_DAILY_LIMIT = "50"
