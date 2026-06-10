@@ -45,7 +45,10 @@ export async function handleHistory(
 
     return jsonResponse({ success: true, data: result })
   } catch (err) {
-    if (err instanceof Error && (err.message.includes('device_id') || err.message.includes('X-Device-ID'))) {
+    if (
+      err instanceof Error &&
+      (err.message.includes('device_id') || err.message.includes('X-Device-ID'))
+    ) {
       return errorResponse(err.message, 400)
     }
     const message = err instanceof Error ? err.message : 'Internal server error'

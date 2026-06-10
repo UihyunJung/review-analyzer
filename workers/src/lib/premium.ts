@@ -6,7 +6,11 @@ import type { Env } from '../index'
  */
 const cache = new Map<string, { isPro: boolean; expiresAt: number }>()
 
-export async function checkPremium(installId: string, env: Env, skipCache = false): Promise<boolean> {
+export async function checkPremium(
+  installId: string,
+  env: Env,
+  skipCache = false
+): Promise<boolean> {
   if (!installId) return false
 
   if (!skipCache) {

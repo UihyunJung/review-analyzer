@@ -22,8 +22,13 @@ export async function handleUsage(
     const migrateFrom = url.searchParams.get('migrate')
     if (migrateFrom && UUID_REGEX.test(migrateFrom) && migrateFrom !== installId) {
       try {
-        await supabaseRpc(env, 'migrate_usage', { p_old_device_id: migrateFrom, p_new_device_id: installId })
-      } catch { /* 이관 실패해도 조회는 계속 */ }
+        await supabaseRpc(env, 'migrate_usage', {
+          p_old_device_id: migrateFrom,
+          p_new_device_id: installId
+        })
+      } catch {
+        /* 이관 실패해도 조회는 계속 */
+      }
     }
 
     // Pro 체크 — Vercel /api/status (1분 캐시, refresh=true 시 캐시 무시)
@@ -49,7 +54,10 @@ export async function handleUsage(
       }
     })
   } catch (err) {
-    if (err instanceof Error && (err.message.includes('device_id') || err.message.includes('X-Device-ID'))) {
+    if (
+      err instanceof Error &&
+      (err.message.includes('device_id') || err.message.includes('X-Device-ID'))
+    ) {
       return errorResponse(err.message, 400)
     }
     const message = err instanceof Error ? err.message : 'Internal server error'
