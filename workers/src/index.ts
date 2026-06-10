@@ -1,3 +1,4 @@
+import type { ExecutionContext } from '@cloudflare/workers-types'
 import { handleAnalyze } from './routes/analyze'
 import { handleUsage } from './routes/usage'
 import { handleHistory } from './routes/history'
@@ -7,12 +8,16 @@ import { isRateLimited } from './lib/rate-limit'
 export interface Env {
   GEMINI_API_KEY: string
   GEMINI_MODEL: string
+  GEMINI_PROXY_SECRET: string
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
   PROMPT_VERSION: string
   FREE_DAILY_LIMIT: string
   PRO_DAILY_LIMIT: string
   PADDLE_BACKEND_URL: string
+  ENV_LABEL: string
+  TELEGRAM_BOT_TOKEN?: string
+  TELEGRAM_CHAT_ID?: string
   ALLOWED_ORIGINS?: string
 }
 
@@ -55,7 +60,7 @@ function makeErrorCodeResponse(origin: string) {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url)
     const path = url.pathname
     const origin = request.headers.get('Origin') ?? ''
@@ -84,7 +89,7 @@ export default {
       switch (path) {
         case '/analyze':
           if (request.method !== 'POST') return errorResponse('Method not allowed', 405)
-          return handleAnalyze(request, env, jsonResponse, errorResponse, errorCodeResponse)
+          return handleAnalyze(request, env, jsonResponse, errorResponse, errorCodeResponse, ctx)
 
         case '/usage':
           if (request.method !== 'GET') return errorResponse('Method not allowed', 405)

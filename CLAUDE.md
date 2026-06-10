@@ -40,6 +40,8 @@ npx prettier --check 'workers/**/*.{ts,js}'
 - **i18n**: en, ko, ja, zh-CN, zh-TW, de, es, fr, pt-BR, it (src/i18n/*.json + _locales/)
 - **환경 분리**: `.env.development` / `.env.production` (Vite), `wrangler.toml [env.dev]` (Workers)
 - **에러 분류 (v0.3.3+)**: Worker가 `errorCode` 문자열 반환 (`GEMINI_OVERLOADED`/`GEMINI_RATE_LIMIT`/`WORKERS_RATE_LIMIT`/`GEMINI_NOT_FOUND`/`GEMINI_ERROR`/`PARSE_FAILED`). 클라이언트는 503/GEMINI_ERROR에 한해 2s 대기 후 1회 자동 재시도 + "재시도 중…" UI. 최종 실패 시 코드별 i18n 메시지 + 선택적 "다시 시도" 버튼 (재시도 가능 에러에만)
+- **프록시 인증 (2026-06)**: `/api/gemini`는 `X-Proxy-Secret` 헤더 필수 (Worker secret `GEMINI_PROXY_SECRET` = Vercel env, prod/preview 동일 값) + 모델 allowlist (`GEMINI_ALLOWED_MODELS`). 캐시 경로는 Gemini 미호출이라 인증 무관
+- **운영 모니터링 (2026-06)**: Gemini 에러 시 `error-classify.ts`로 세부 분류 (CREDITS_DEPLETED/PROXY_AUTH_FAILED 등 critical, QUOTA_RATE_LIMIT/GOOGLE_OVERLOADED 등 warning) → Supabase `error_events` 적재 + RPC `record_error_and_check_alert` 판정 (critical 즉시, warning 10분 내 3건, 분류+env별 60분 dedup) → Telegram 알림. `ctx.waitUntil` fire-and-forget — 사용자 응답에 영향 없음. 사용자에게 보이는 메시지는 errorCode 매핑 그대로 (크레딧 소진도 errorRateLimit으로 표시 — 의도된 동작)
 
 ## 핵심 규칙
 
@@ -65,12 +67,18 @@ npx prettier --check 'workers/**/*.{ts,js}'
 - `workers/src/routes/compare.ts` — Pro 전용 장소 비교
 - `workers/src/lib/gemini.ts` — Vercel 프록시 경유 Gemini 호출 + `GeminiError` 클래스
 - `workers/src/lib/error-mapping.ts` — status → errorCode 순수 함수 (테스트 대상)
+- `workers/src/lib/error-classify.ts` — 운영자 알림용 세부 분류 순수 함수 (error-mapping과 독립, 서로 import 금지)
+- `workers/src/lib/alert.ts` — Telegram 알림 (포맷 순수 함수 + RPC 판정 + 발송, fire-and-forget)
+- `workers/sql/error-monitoring.sql` — error_events/error_alert_state/RPC 마이그레이션 사본 (DB가 원본)
 - `workers/src/lib/premium.ts` — Pro 체크 (1분 캐시, skipCache 옵션)
 - `workers/tsconfig.json` — workers 전용 TS 설정 (루트 tsconfig는 workers 제외)
-- `tests/contents/error-message-key.test.ts`, `workers/tests/error-code-mapping.test.ts` — 자동 테스트
+- `tests/contents/error-message-key.test.ts`, `workers/tests/error-code-mapping.test.ts`, `workers/tests/error-classify.test.ts`, `workers/tests/alert-format.test.ts` — 자동 테스트
+
+## 운영 주의사항
+
+- **wrangler secret은 반드시 `secret bulk` (JSON 파일) 사용** — PowerShell 파이프(`'값' | wrangler secret put`)는 trailing CR(\r)이 값에 포함돼 인증 실패를 유발함 (2026-06-11 실제 발생)
+- 시크릿 변경은 재배포 없이 즉시 반영됨. prod(`--env` 없음)와 `--env dev` 각각 설정 필요
 
 ## TODO
-
-- **운영 모니터링 자체 알림 (Slack or Telegram)**: Workers에서 Gemini 429/503 발생 시 Supabase `error_events` 테이블에 fire-and-forget 적재 → 임계치(예: 10분 내 N건) 초과 시 Slack webhook 또는 Telegram Bot API로 푸시. 중복 알림 방지(직전 1시간 내 동일 errorCode면 스킵). Tier 1이어도 Google은 자동 알림을 보내지 않음. (관련 계획: `C:\Users\Administrator\.claude\plans\inherited-waddling-thunder.md` 범위 밖 항목)
 
 - **i18n 키 네이밍 컨벤션 도입**: 현재 프로젝트는 도메인별 prefix 컨벤션 없음. `networkError`(popup checkout용), `errorNetwork`(분석 플로우용), `errorOverloaded`/`errorRateLimit` 등 접미어/접두어 혼재. 일관된 `error_<domain>_<reason>` 형식(예: `errorCheckoutNetwork`, `errorAnalyzeNetwork`) 도입 검토. 리팩터 부담 있으므로 후속 과제.

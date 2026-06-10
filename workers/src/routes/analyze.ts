@@ -1,6 +1,9 @@
+import type { ExecutionContext } from '@cloudflare/workers-types'
 import type { Env } from '../index'
 import { callGemini, GeminiError } from '../lib/gemini'
 import { geminiStatusToErrorCode } from '../lib/error-mapping'
+import { classifyGeminiError, classifyParseError, classifyFetchError } from '../lib/error-classify'
+import { reportGeminiFailure } from '../lib/alert'
 import { supabaseRpc, supabaseQuery } from '../lib/supabase'
 import {
   validateRequestSize,
@@ -124,7 +127,8 @@ export async function handleAnalyze(
   env: Env,
   jsonResponse: (data: unknown, status?: number) => Response,
   errorResponse: (message: string, status: number) => Response,
-  errorCodeResponse: (errorCode: string, status: number) => Response
+  errorCodeResponse: (errorCode: string, status: number) => Response,
+  ctx: ExecutionContext
 ): Promise<Response> {
   try {
     // 1. 인증: X-Device-ID → installId
@@ -225,9 +229,22 @@ export async function handleAnalyze(
         } catch {
           console.error('[Rollback failed]', err)
         }
+        // 운영자 알림 (fire-and-forget — 사용자 응답에 영향 없음)
         if (err instanceof GeminiError) {
-          return errorCodeResponse(geminiStatusToErrorCode(err.status), err.status)
+          const errorCode = geminiStatusToErrorCode(err.status)
+          reportGeminiFailure(env, ctx, classifyGeminiError(err.status, err.message), {
+            status: err.status,
+            errorCode,
+            detail: err.message
+          })
+          return errorCodeResponse(errorCode, err.status)
         }
+        const fetchMessage = err instanceof Error ? err.message : String(err)
+        reportGeminiFailure(env, ctx, classifyFetchError(fetchMessage), {
+          status: 0,
+          errorCode: 'GEMINI_ERROR',
+          detail: fetchMessage
+        })
         return errorCodeResponse('GEMINI_ERROR', 502)
       }
 
@@ -246,6 +263,11 @@ export async function handleAnalyze(
             } catch {
               /* ignore */
             }
+            reportGeminiFailure(env, ctx, classifyParseError(), {
+              status: 502,
+              errorCode: 'PARSE_FAILED',
+              detail: geminiText.slice(0, 1000)
+            })
             return errorCodeResponse('PARSE_FAILED', 502)
           }
         } else {
@@ -254,6 +276,11 @@ export async function handleAnalyze(
           } catch {
             /* ignore */
           }
+          reportGeminiFailure(env, ctx, classifyParseError(), {
+            status: 502,
+            errorCode: 'PARSE_FAILED',
+            detail: geminiText.slice(0, 1000)
+          })
           return errorCodeResponse('PARSE_FAILED', 502)
         }
       }

@@ -12,6 +12,7 @@ PROMPT_VERSION = "v2"
 FREE_DAILY_LIMIT = "3"
 PRO_DAILY_LIMIT = "50"
 PADDLE_BACKEND_URL = "https://paddle-extensions-backend.vercel.app"
+ENV_LABEL = "production"
 
 # Development (`wrangler deploy --env dev`)
 [env.dev]
@@ -22,8 +23,12 @@ PROMPT_VERSION = "v2"
 FREE_DAILY_LIMIT = "3"
 PRO_DAILY_LIMIT = "50"
 PADDLE_BACKEND_URL = "https://paddle-extensions-backend-git-sandbox-euihyun-jungs-projects.vercel.app"
+ENV_LABEL = "dev"
 
-# Secrets (set via `wrangler secret put`):
+# Secrets (set via `wrangler secret put`, prod와 --env dev 각각):
 # GEMINI_API_KEY
 # SUPABASE_URL
 # SUPABASE_SERVICE_ROLE_KEY
+# GEMINI_PROXY_SECRET — Vercel /api/gemini 프록시 인증 (Vercel env와 동일 값)
+# TELEGRAM_BOT_TOKEN — 운영 알림용 (선택, 미설정 시 알림 no-op)
+# TELEGRAM_CHAT_ID — 운영 알림용 (선택)
