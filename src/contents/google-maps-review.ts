@@ -2,7 +2,17 @@ import { extractGoogleMapsReviews } from '../lib/scrapers/google-maps'
 import { extractPlaceId } from '../lib/scrapers/google-maps'
 import { getDefaultLanguage, setLanguage, t } from '../js/i18n.js'
 import { STORAGE_KEYS } from '../js/config.js'
-import { showLoading, setLoadingStage, showResult, showError, showExceeded, hideModal, hasResult, toggleModal, clearResult, setRetryHandler } from './modal'
+import {
+  showLoading,
+  setLoadingStage,
+  showResult,
+  showError,
+  showExceeded,
+  hideModal,
+  toggleModal,
+  clearResult,
+  setRetryHandler
+} from './modal'
 import { getErrorMessageKey } from './error-message-key'
 
 // 응답 타입 (background.js와 계약)
@@ -108,10 +118,16 @@ async function handleAnalyzeClick(btn: HTMLButtonElement) {
   }
 
   // 분석 전 사용량 확인
-  const usageCheck = await new Promise<{ success?: boolean; data?: { remaining: number } }>((resolve) => {
-    chrome.runtime.sendMessage({ type: 'GET_USAGE' }, resolve)
-  })
-  if (usageCheck?.success && usageCheck.data?.remaining !== undefined && usageCheck.data.remaining <= 0) {
+  const usageCheck = await new Promise<{ success?: boolean; data?: { remaining: number } }>(
+    (resolve) => {
+      chrome.runtime.sendMessage({ type: 'GET_USAGE' }, resolve)
+    }
+  )
+  if (
+    usageCheck?.success &&
+    usageCheck.data?.remaining !== undefined &&
+    usageCheck.data.remaining <= 0
+  ) {
     exceeded = true
     btn.textContent = t('upgradeButton')
     btn.style.background = '#ff9800'

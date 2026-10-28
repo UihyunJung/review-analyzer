@@ -19,4 +19,3 @@ export interface PlaceInfo {
   totalReviews: number
   address?: string
 }
-

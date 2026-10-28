@@ -165,7 +165,6 @@ function ensureHost(): ShadowRoot {
     if (e.target === overlay) hideModal()
   })
 
-
   shadowRoot.appendChild(overlay)
   return shadowRoot
 }
@@ -294,7 +293,18 @@ function buildResultDOM(root: HTMLElement) {
 
   const featureList = document.createElement('ul')
   featureList.className = 'pro-gate-features'
-  const features = ['highlights', 'watchOut', 'trendTitle', 'bestFor', 'topPicks', 'avoid', 'tips', 'topReviews', 'viewHistory', 'compareButton']
+  const features = [
+    'highlights',
+    'watchOut',
+    'trendTitle',
+    'bestFor',
+    'topPicks',
+    'avoid',
+    'tips',
+    'topReviews',
+    'viewHistory',
+    'compareButton'
+  ]
   for (const key of features) {
     const li = document.createElement('li')
     li.textContent = t(key)
@@ -351,7 +361,7 @@ function buildResultDOM(root: HTMLElement) {
 
 // --- 렌더링 함수 (Shadow DOM 기반) ---
 
-function renderAspects(aspects: AspectData[], isPro: boolean) {
+function renderAspects(aspects: AspectData[]) {
   const container = el('aspects-container')
   clearChildren(container)
 
@@ -413,7 +423,13 @@ function renderAspects(aspects: AspectData[], isPro: boolean) {
   }
 }
 
-function renderList(containerId: string, sectionId: string, items: string[] | undefined, isPro: boolean, freeLimit?: number) {
+function renderList(
+  containerId: string,
+  sectionId: string,
+  items: string[] | undefined,
+  isPro: boolean,
+  freeLimit?: number
+) {
   const list = el(containerId)
   const section = el(sectionId)
   clearChildren(list)
@@ -526,7 +542,12 @@ function renderBestFor(tags: string[] | undefined) {
   container.appendChild(tagsDiv)
 }
 
-function renderProList(containerId: string, label: string, items: string[] | undefined, color: string) {
+function renderProList(
+  containerId: string,
+  label: string,
+  items: string[] | undefined,
+  color: string
+) {
   const container = el(containerId)
   clearChildren(container)
   if (!items?.length) return
@@ -563,7 +584,9 @@ function renderTopReviews(reviews: TopReviewData[] | undefined) {
     const aspectLabel = document.createElement('span')
     aspectLabel.className = 'quote-aspect'
     const aspectKey = typeof review.aspect === 'string' ? review.aspect : ''
-    const aspectName = aspectKey ? (t(`aspect${aspectKey.charAt(0).toUpperCase() + aspectKey.slice(1)}`) || aspectKey) : ''
+    const aspectName = aspectKey
+      ? t(`aspect${aspectKey.charAt(0).toUpperCase() + aspectKey.slice(1)}`) || aspectKey
+      : ''
     aspectLabel.textContent = `${aspectName} (${review.rating ?? 0}\u2605)`
     card.appendChild(aspectLabel)
 
@@ -624,7 +647,13 @@ function loadHistory() {
     itemsEl.id = 'history-items'
     listEl.appendChild(itemsEl)
 
-    for (const item of response.data as Array<{ id: string; place_name: string; place_category: string; created_at: string; review_count: number }>) {
+    for (const item of response.data as Array<{
+      id: string
+      place_name: string
+      place_category: string
+      created_at: string
+      review_count: number
+    }>) {
       const row = document.createElement('div')
       row.className = 'history-row'
 
@@ -719,7 +748,8 @@ function runCompare(id1: string, id2: string) {
 
       for (const a of place.aspects || []) {
         const config = ASPECT_CONFIG[a.aspect] || { color: '#667eea', icon: '\u2B50' }
-        const aspectName = t(`aspect${a.aspect.charAt(0).toUpperCase() + a.aspect.slice(1)}`) || a.aspect
+        const aspectName =
+          t(`aspect${a.aspect.charAt(0).toUpperCase() + a.aspect.slice(1)}`) || a.aspect
 
         const row = document.createElement('div')
         row.className = 'compare-aspect'
@@ -760,7 +790,12 @@ function loadHistoryDetail(id: string) {
       listEl.appendChild(err)
       return
     }
-    const item = response.data as { place_name: string; place_category: string; summary: AnalysisData; review_count: number }
+    const item = response.data as {
+      place_name: string
+      place_category: string
+      summary: AnalysisData
+      review_count: number
+    }
     const placeInfo = { name: item.place_name, category: item.place_category } as PlaceInfo
     const summary = { ...item.summary, reviewCount: item.review_count } as AnalysisData
     renderAnalysis(summary, placeInfo, true)
@@ -779,7 +814,7 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
   el('place-name').textContent = placeInfo?.name || ''
   el('place-category').textContent = placeInfo?.category || ''
 
-  renderAspects(data.aspects || [], isPro)
+  renderAspects(data.aspects || [])
 
   const proSection = el('pro-section')
   const proGate = el('pro-gate')
@@ -814,7 +849,8 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
     langSection.style.display = 'block'
     const total = Object.values(breakdown).reduce((a, b) => a + b, 0)
     langInfo.textContent =
-      t('reviews') + ': ' +
+      t('reviews') +
+      ': ' +
       Object.entries(breakdown)
         .sort(([, a], [, b]) => b - a)
         .map(([lang, count]) => {
@@ -828,7 +864,10 @@ function renderAnalysis(data: AnalysisData, placeInfo: PlaceInfo, isPro: boolean
     langSection.style.display = 'none'
   }
 
-  el('review-count').textContent = t('basedOnReviews').replace('{count}', String(data.reviewCount || 0))
+  el('review-count').textContent = t('basedOnReviews').replace(
+    '{count}',
+    String(data.reviewCount || 0)
+  )
 
   // 캐시 안내
   const cachedNotice = el('cached-notice')
@@ -977,14 +1016,16 @@ export function showExceeded() {
 
   const monthlyBtn = document.createElement('button')
   monthlyBtn.textContent = t('monthlyPlan')
-  monthlyBtn.style.cssText = 'padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer'
+  monthlyBtn.style.cssText =
+    'padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer'
   monthlyBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'monthly' })
   })
 
   const annualBtn = document.createElement('button')
   annualBtn.textContent = t('annualPlan')
-  annualBtn.style.cssText = 'padding:8px 16px;background:#764ba2;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer'
+  annualBtn.style.cssText =
+    'padding:8px 16px;background:#764ba2;color:white;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer'
   annualBtn.addEventListener('click', () => {
     chrome.runtime.sendMessage({ type: 'OPEN_CHECKOUT', plan: 'annual' })
   })

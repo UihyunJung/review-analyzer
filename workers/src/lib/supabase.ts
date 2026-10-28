@@ -8,7 +8,6 @@ export class SupabaseError extends Error {
     // 내부 에러 상세는 로깅만, 사용자에게는 일반 메시지
     super('Database operation failed')
     this.name = 'SupabaseError'
-    // eslint-disable-next-line no-console
     console.error(`[Supabase ${statusCode}]`, detail)
   }
 }

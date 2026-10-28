@@ -152,7 +152,8 @@ async function handleAnalyze(request, sendResponse) {
     // content script가 전달한 isFinalAttempt 플래그로 최종 여부 판단
     const isFinalAttempt = request.isFinalAttempt ?? true
     const retryableCodes = ['GEMINI_OVERLOADED', 'GEMINI_ERROR']
-    const skipStorage = !response.success && retryableCodes.includes(response.errorCode) && !isFinalAttempt
+    const skipStorage =
+      !response.success && retryableCodes.includes(response.errorCode) && !isFinalAttempt
     if (!skipStorage) {
       const storedResult = { ...response, placeInfo: request.placeInfo, timestamp: Date.now() }
       await chrome.storage.local.set({ [STORAGE_KEYS.LAST_ANALYSIS]: storedResult })
@@ -160,16 +161,24 @@ async function handleAnalyze(request, sendResponse) {
 
     // 분석 후 사용량 캐시 갱신 (popup에서 즉시 반영)
     try {
-      const usageRes = await fetch(`${WORKERS_BASE}/usage`, { headers: { 'X-Device-ID': installId } })
+      const usageRes = await fetch(`${WORKERS_BASE}/usage`, {
+        headers: { 'X-Device-ID': installId }
+      })
       if (usageRes.ok) {
         const usageData = await usageRes.json()
         await chrome.storage.local.set({ [STORAGE_KEYS.USAGE_CACHE]: usageData.data })
       }
-    } catch { /* 사용량 갱신 실패해도 무시 */ }
+    } catch {
+      /* 사용량 갱신 실패해도 무시 */
+    }
 
     sendResponse(response)
   } catch (error) {
-    sendResponse({ success: false, error: error.message || 'Unknown error', errorCode: 'NETWORK_ERROR' })
+    sendResponse({
+      success: false,
+      error: error.message || 'Unknown error',
+      errorCode: 'NETWORK_ERROR'
+    })
   }
 }
 
@@ -181,7 +190,9 @@ async function handleGetHistory(sendResponse) {
       headers: { 'X-Device-ID': installId }
     })
     const result = await res.json()
-    sendResponse(res.ok ? result : { success: false, error: result.error || 'Failed to fetch history' })
+    sendResponse(
+      res.ok ? result : { success: false, error: result.error || 'Failed to fetch history' }
+    )
   } catch (err) {
     console.error('[GET_HISTORY failed]', err)
     sendResponse({ success: false, error: 'Network error' })

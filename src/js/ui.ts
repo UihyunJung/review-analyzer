@@ -71,7 +71,9 @@ function updateUsageUI(usage: { count: number; limit: number; remaining: number 
   if (exceeded) {
     upsellEl.textContent = t('upsellMessage')
     upsellEl.style.display = 'block'
-    upsellEl.onclick = () => { el('upgrade-panel').style.display = 'block' }
+    upsellEl.onclick = () => {
+      el('upgrade-panel').style.display = 'block'
+    }
   } else {
     upsellEl.style.display = 'none'
   }
@@ -212,9 +214,12 @@ function bindEvents() {
         isPremium = true
         updatePremiumUI()
         // 사용량도 갱신 (Pro 한도 반영, 캐시 무시 + 이전 사용량 이관)
-        chrome.runtime.sendMessage({ type: 'GET_USAGE', refresh: true, migrate: result.previousInstallId || null }, (response) => {
-          if (response?.success && response.data) updateUsageUI(response.data)
-        })
+        chrome.runtime.sendMessage(
+          { type: 'GET_USAGE', refresh: true, migrate: result.previousInstallId || null },
+          (response) => {
+            if (response?.success && response.data) updateUsageUI(response.data)
+          }
+        )
         showMessage(t('restoreSuccess'), 'success')
       } else {
         const msg = result.reason === 'cooldown' ? t('cooldownMessage') : t('restoreFail')
@@ -229,7 +234,8 @@ function bindEvents() {
   // storage 변경 리스너
   chrome.storage.onChanged.addListener((changes) => {
     if (changes[STORAGE_KEYS.PREMIUM]) isPremium = changes[STORAGE_KEYS.PREMIUM].newValue === true
-    if (changes[STORAGE_KEYS.PLAN_TYPE]) planType = asString(changes[STORAGE_KEYS.PLAN_TYPE].newValue)
+    if (changes[STORAGE_KEYS.PLAN_TYPE])
+      planType = asString(changes[STORAGE_KEYS.PLAN_TYPE].newValue)
     if (changes[STORAGE_KEYS.EXPIRES_AT])
       expiresAt = asString(changes[STORAGE_KEYS.EXPIRES_AT].newValue)
     if (changes[STORAGE_KEYS.SUB_STATUS])

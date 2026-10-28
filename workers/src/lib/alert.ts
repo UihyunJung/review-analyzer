@@ -51,7 +51,6 @@ async function sendTelegram(env: Env, text: string): Promise<void> {
   })
   if (!res.ok) {
     // 토큰 노출 방지 — URL/응답 바디는 로깅하지 않고 상태 코드만
-    // eslint-disable-next-line no-console
     console.error(`[Alert] Telegram send failed: ${res.status}`)
   }
 }
@@ -85,7 +84,6 @@ export function reportGeminiFailure(
         }
       } catch (err) {
         // 알림 실패는 분석 플로우에 절대 영향 없음
-        // eslint-disable-next-line no-console
         console.error('[Alert] failed:', err instanceof Error ? err.message : err)
       }
     })()

@@ -73,10 +73,38 @@ export function parseRelativeDate(relativeStr: string): Date | null {
     [/(\d+)\s*hour/i, (n) => new Date(now.getTime() - n * 3600 * 1000)],
     [/(\d+)\s*day/i, (n) => new Date(now.getTime() - n * 86400 * 1000)],
     [/(\d+)\s*week/i, (n) => new Date(now.getTime() - n * 7 * 86400 * 1000)],
-    [/(\d+)\s*month/i, (n) => { const d = new Date(now); d.setMonth(d.getMonth() - n); return d }],
-    [/(\d+)\s*year/i, (n) => { const d = new Date(now); d.setFullYear(d.getFullYear() - n); return d }],
-    [/^a\s+month/i, () => { const d = new Date(now); d.setMonth(d.getMonth() - 1); return d }],
-    [/^a\s+year/i, () => { const d = new Date(now); d.setFullYear(d.getFullYear() - 1); return d }],
+    [
+      /(\d+)\s*month/i,
+      (n) => {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - n)
+        return d
+      }
+    ],
+    [
+      /(\d+)\s*year/i,
+      (n) => {
+        const d = new Date(now)
+        d.setFullYear(d.getFullYear() - n)
+        return d
+      }
+    ],
+    [
+      /^a\s+month/i,
+      () => {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - 1)
+        return d
+      }
+    ],
+    [
+      /^a\s+year/i,
+      () => {
+        const d = new Date(now)
+        d.setFullYear(d.getFullYear() - 1)
+        return d
+      }
+    ],
     [/^a\s+week/i, () => new Date(now.getTime() - 7 * 86400 * 1000)],
     [/^a\s+day|^yesterday/i, () => new Date(now.getTime() - 86400 * 1000)],
     // 한국어
@@ -85,9 +113,30 @@ export function parseRelativeDate(relativeStr: string): Date | null {
     [/(\d+)\s*시간\s*전/, (n) => new Date(now.getTime() - n * 3600 * 1000)],
     [/(\d+)\s*일\s*전/, (n) => new Date(now.getTime() - n * 86400 * 1000)],
     [/(\d+)\s*주\s*전/, (n) => new Date(now.getTime() - n * 7 * 86400 * 1000)],
-    [/(\d+)\s*달\s*전/, (n) => { const d = new Date(now); d.setMonth(d.getMonth() - n); return d }],
-    [/(\d+)\s*개월\s*전/, (n) => { const d = new Date(now); d.setMonth(d.getMonth() - n); return d }],
-    [/(\d+)\s*년\s*전/, (n) => { const d = new Date(now); d.setFullYear(d.getFullYear() - n); return d }]
+    [
+      /(\d+)\s*달\s*전/,
+      (n) => {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - n)
+        return d
+      }
+    ],
+    [
+      /(\d+)\s*개월\s*전/,
+      (n) => {
+        const d = new Date(now)
+        d.setMonth(d.getMonth() - n)
+        return d
+      }
+    ],
+    [
+      /(\d+)\s*년\s*전/,
+      (n) => {
+        const d = new Date(now)
+        d.setFullYear(d.getFullYear() - n)
+        return d
+      }
+    ]
   ]
 
   for (const [regex, calc] of patterns) {
@@ -188,7 +237,8 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 // 스크롤 컨테이너를 반환 (파싱 시 이 안에서만 검색)
 async function loadReviews(doc: Document, maxReviews: number): Promise<Element | null> {
   // 1. 리뷰 탭 클릭
-  const reviewTab = doc.querySelector(SELECTORS.REVIEW_TAB) || doc.querySelector(SELECTORS.ALL_REVIEWS_BUTTON)
+  const reviewTab =
+    doc.querySelector(SELECTORS.REVIEW_TAB) || doc.querySelector(SELECTORS.ALL_REVIEWS_BUTTON)
   if (reviewTab && reviewTab instanceof HTMLElement) {
     reviewTab.click()
   }
@@ -198,7 +248,8 @@ async function loadReviews(doc: Document, maxReviews: number): Promise<Element |
   for (let i = 0; i < 20; i++) {
     await wait(500)
     scrollContainer = doc.querySelector(SELECTORS.REVIEW_PANEL_SCROLLABLE)
-    if (scrollContainer && scrollContainer.querySelectorAll(SELECTORS.REVIEW_ITEM).length >= 1) break
+    if (scrollContainer && scrollContainer.querySelectorAll(SELECTORS.REVIEW_ITEM).length >= 1)
+      break
   }
 
   if (!scrollContainer) return null
@@ -231,7 +282,11 @@ export async function extractGoogleMapsReviews(
 ): Promise<{ reviews: Review[]; placeInfo: PlaceInfo }> {
   // Overview 탭으로 전환하여 장소 메타데이터 추출 (다른 탭에서는 h1/카테고리 사라짐)
   const overviewTab = doc.querySelector(SELECTORS.OVERVIEW_TAB)
-  if (overviewTab && overviewTab instanceof HTMLElement && overviewTab.getAttribute('aria-selected') !== 'true') {
+  if (
+    overviewTab &&
+    overviewTab instanceof HTMLElement &&
+    overviewTab.getAttribute('aria-selected') !== 'true'
+  ) {
     overviewTab.click()
     await wait(500)
   }
