@@ -82,7 +82,8 @@ function updateUsageUI(usage: { count: number; limit: number; remaining: number 
 async function init() {
   // 저장된 언어 복원 또는 브라우저 기본 언어
   const langData = await chrome.storage.local.get(STORAGE_KEYS.LANGUAGE)
-  const lang = langData[STORAGE_KEYS.LANGUAGE] || getDefaultLanguage()
+  const savedLang = langData[STORAGE_KEYS.LANGUAGE]
+  const lang = typeof savedLang === 'string' && savedLang ? savedLang : getDefaultLanguage()
   setLanguage(lang)
   const langSelect = el('lang-select') as HTMLSelectElement
   langSelect.value = lang

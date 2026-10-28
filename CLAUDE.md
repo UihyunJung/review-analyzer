@@ -15,6 +15,7 @@ pnpm build:dev      # 개발용 빌드 (.env.development)
 pnpm dev            # Vite 개발 서버
 pnpm lint           # ESLint (src/ 대상)
 pnpm format:check   # Prettier 체크 (src/ 대상)
+pnpm typecheck      # tsc --noEmit (루트 + workers 두 tsconfig)
 pnpm test           # vitest (tests/ + workers/tests/)
 ```
 
@@ -23,9 +24,8 @@ Workers (Cloudflare):
 cd workers
 npx wrangler deploy --config wrangler.toml              # 프로덕션
 npx wrangler deploy --config wrangler.toml --env dev    # 개발
-# 타입/린트/포맷 (workers는 루트 pnpm lint에 포함 안 됨):
-cd .. && npx tsc --noEmit -p workers/tsconfig.json
-npx eslint workers/src/
+# 린트/포맷 (workers는 루트 pnpm lint에 포함 안 됨, 타입은 pnpm typecheck에 포함):
+cd .. && npx eslint workers/src/
 npx prettier --check 'workers/**/*.{ts,js}'
 ```
 

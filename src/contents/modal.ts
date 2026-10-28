@@ -1,10 +1,6 @@
 import { t } from '../js/i18n.js'
 import type { PlaceInfo } from '../lib/types'
 
-declare module '*.css?inline' {
-  const css: string
-  export default css
-}
 import modalCss from '../css/modal.css?inline'
 
 // --- 분석 결과 타입 ---

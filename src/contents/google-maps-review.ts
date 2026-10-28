@@ -48,8 +48,9 @@ let currentLang = getDefaultLanguage()
 setLanguage(currentLang)
 
 chrome.storage.local.get(STORAGE_KEYS.LANGUAGE).then((data) => {
-  if (data[STORAGE_KEYS.LANGUAGE]) {
-    currentLang = data[STORAGE_KEYS.LANGUAGE]
+  const saved = data[STORAGE_KEYS.LANGUAGE]
+  if (typeof saved === 'string' && saved) {
+    currentLang = saved
     setLanguage(currentLang)
     if (analyzeBtn) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
     if (toggleBtn) toggleBtn.title = t('togglePanel') || 'Show/hide analysis'
@@ -299,7 +300,8 @@ observer.observe(document.body, { childList: true, subtree: true })
 // --- storage 변경 실시간 반영 ---
 chrome.storage.onChanged.addListener((changes) => {
   if (changes[STORAGE_KEYS.LANGUAGE]) {
-    currentLang = changes[STORAGE_KEYS.LANGUAGE].newValue || getDefaultLanguage()
+    const next = changes[STORAGE_KEYS.LANGUAGE].newValue
+    currentLang = typeof next === 'string' && next ? next : getDefaultLanguage()
     setLanguage(currentLang)
     if (!loading) analyzeBtn.textContent = '\u2605 ' + t('analyzeButton')
     toggleBtn.title = t('togglePanel') || 'Show/hide analysis'

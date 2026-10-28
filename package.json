@@ -12,12 +12,15 @@
     "lint": "eslint src/",
     "format:check": "prettier --check 'src/**/*.{ts,js}'",
     "format": "prettier --write 'src/**/*.{ts,js}'",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p workers/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261028.1",
     "@types/chrome": "^0.3.7",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.6.5",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
     "@typescript-eslint/parser": "^8.72.1",
     "eslint": "^10.13.0",
