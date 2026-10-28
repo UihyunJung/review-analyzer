@@ -1,5 +1,27 @@
 # TODO: v0.3.0 게시 배포 체크리스트
 
+## ⚠️ 다음 배포 전 필수 확인 — 2026-10-28 툴체인 일괄 업데이트 이후 첫 배포
+
+2026-10-28에 개발 의존성을 전부 최신으로 올렸다 (TS 6.0.3, **Vite 6 → 8 (번들러가 Rollup → Rolldown으로 교체)**, Vitest 5, ESLint 10, jsdom 30, @types/chrome 0.3, wrangler 4.154). 의존성은 전부 devDependencies라 **아직 배포된 확장/워커에는 아무 영향이 없다**. 새 툴체인으로 빌드된 산출물은 다음 배포 때 처음 사용자에게 나간다. 자동 검증(빌드·테스트 56개·lint·typecheck)과 산출물 전후 비교는 끝났지만, Rolldown 출력물은 기존과 다른 코드라 **수동 스모크 테스트가 한 번 필요하다**.
+
+### 확장 (CWS 제출 전)
+- [ ] `pnpm build` → `chrome://extensions`에서 "압축해제된 확장 프로그램 로드"로 `dist/` 로드
+- [ ] 팝업: 언어 선택 변경, 구독 상태 배지, 사용량 표시, 업그레이드 패널 열림 확인
+- [ ] Google Maps 장소 페이지: 분석 버튼 노출 → 분석 실행 → 모달에 Aspect Scores 렌더링 확인
+- [ ] Pro 계정이면 Highlights/Trend 등 Pro Insights + 히스토리/비교 모달 열림 확인
+- [ ] 언어 변경 후 모달·버튼 텍스트가 즉시 바뀌는지 확인 (storage onChanged 경로 — 이번에 타입 가드 추가한 부분)
+- [ ] 에러 경로: 네트워크 끊고 분석 → 에러 메시지 + "다시 시도" 버튼 확인
+
+### Workers (`wrangler deploy` 전)
+- [ ] `cd workers && npx wrangler deploy --dry-run` 으로 번들 생성 확인 (업데이트 당시 기존 번들과 14바이트 차이, 사실상 동일)
+- [ ] dev 환경에 먼저 배포 (`--env dev`) → `/usage`, `/analyze` 호출 확인 후 prod 배포
+
+### 문제 생기면
+- Vite 8 쪽 문제로 의심되면 `pnpm add -D vite@6 vitest@3` 으로 되돌려 빌드 비교. 나머지 패키지는 산출물에 영향 없음
+- 확인 끝나면 이 섹션은 삭제
+
+---
+
 ## 현재 상태
 - **v0.2.0**: CWS 심사/게시 대기 중
 - **v0.3.0**: 코드 완료, main 머지됨, CWS zip 준비됨 (`place-review-analyzer.zip`)
