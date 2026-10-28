@@ -78,6 +78,7 @@ npx prettier --check 'workers/**/*.{ts,js}'
 
 - **wrangler secret은 반드시 `secret bulk` (JSON 파일) 사용** — PowerShell 파이프(`'값' | wrangler secret put`)는 trailing CR(\r)이 값에 포함돼 인증 실패를 유발함 (2026-06-11 실제 발생)
 - 시크릿 변경은 재배포 없이 즉시 반영됨. prod(`--env` 없음)와 `--env dev` 각각 설정 필요
+- **툴체인 (2026-10-28 일괄 업데이트)**: Node 24 / pnpm 9.15.9(packageManager 필드와 일치시킬 것), TS 6.0.x, Vite 8(Rolldown), Vitest 5, ESLint 10. **TypeScript 7은 올리지 말 것** — @typescript-eslint peer 범위가 `<6.1.0`이라 lint가 깨짐. 의존성은 전부 devDependencies라 업데이트만으로는 배포본에 영향 없음. Vite 8 전환 후 첫 CWS 제출 전에는 빌드된 확장을 로드해 팝업·분석 모달 수동 확인 권장
 
 ## TODO
 
