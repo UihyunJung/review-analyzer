@@ -8,6 +8,8 @@ let expiresAt: string | null = null
 let subStatus: string | null = null
 
 const el = (id: string) => document.getElementById(id)!
+// chrome.storage 값은 unknown — 비어있지 않은 문자열만 수용
+const asString = (v: unknown): string | null => (typeof v === 'string' && v ? v : null)
 
 function updatePremiumUI() {
   const badge = el('status-badge')
@@ -91,9 +93,9 @@ async function init() {
     STORAGE_KEYS.SUB_STATUS,
     STORAGE_KEYS.SYNC_FAILED
   ])
-  planType = subData[STORAGE_KEYS.PLAN_TYPE] || null
-  expiresAt = subData[STORAGE_KEYS.EXPIRES_AT] || null
-  subStatus = subData[STORAGE_KEYS.SUB_STATUS] || null
+  planType = asString(subData[STORAGE_KEYS.PLAN_TYPE])
+  expiresAt = asString(subData[STORAGE_KEYS.EXPIRES_AT])
+  subStatus = asString(subData[STORAGE_KEYS.SUB_STATUS])
 
   updatePremiumUI()
 
@@ -227,11 +229,11 @@ function bindEvents() {
   // storage 변경 리스너
   chrome.storage.onChanged.addListener((changes) => {
     if (changes[STORAGE_KEYS.PREMIUM]) isPremium = changes[STORAGE_KEYS.PREMIUM].newValue === true
-    if (changes[STORAGE_KEYS.PLAN_TYPE]) planType = changes[STORAGE_KEYS.PLAN_TYPE].newValue || null
+    if (changes[STORAGE_KEYS.PLAN_TYPE]) planType = asString(changes[STORAGE_KEYS.PLAN_TYPE].newValue)
     if (changes[STORAGE_KEYS.EXPIRES_AT])
-      expiresAt = changes[STORAGE_KEYS.EXPIRES_AT].newValue || null
+      expiresAt = asString(changes[STORAGE_KEYS.EXPIRES_AT].newValue)
     if (changes[STORAGE_KEYS.SUB_STATUS])
-      subStatus = changes[STORAGE_KEYS.SUB_STATUS].newValue || null
+      subStatus = asString(changes[STORAGE_KEYS.SUB_STATUS].newValue)
 
     if (
       changes[STORAGE_KEYS.PREMIUM] ||

@@ -9,9 +9,6 @@ export default defineConfig({
       formats: ['iife'],
       name: 'GMapsReview',
       fileName: () => 'content-google-maps.js'
-    },
-    rollupOptions: {
-      output: { inlineDynamicImports: true }
     }
   }
 })
